@@ -1,466 +1,308 @@
-\# GigZLK Member 4 Platform Architecture
+# GigZLK Member 4 Platform Architecture
 
-
-
-\## Owner
-
-
+## Owner
 
 Member 4 — AI/ML + DevOps/Platform Engineering
 
+---
 
-
-\---
-
-
-
-\## 1. AI/ML Responsibilities
-
-
+## 1. AI/ML Responsibilities
 
 Member 4 is responsible for the shared AI/ML capabilities of GigZLK:
 
+- Job-worker matching
 
+- Job recommendations
 
-\- Job-worker matching
+- Fair payment prediction
 
-\- Job recommendations
+- Fraud and risk detection
 
-\- Fair payment prediction
+- Review sentiment analysis
 
-\- Fraud and risk detection
+- Job quality analysis
 
-\- Review sentiment analysis
+- Demand forecasting
 
-\- Job quality analysis
+- Semantic/vector search
 
-\- Demand forecasting
+- Optional hiring-likelihood analytics
 
-\- Semantic/vector search
+- Optional worker churn prediction
 
-\- Optional hiring-likelihood analytics
+---
 
-\- Optional worker churn prediction
-
-
-
-\---
-
-
-
-\## 2. DevOps / Platform Responsibilities
-
-
+## 2. DevOps / Platform Responsibilities
 
 Member 4 is responsible for shared platform infrastructure:
 
+- Docker
 
+- Docker Compose
 
-\- Docker
+- Kubernetes
 
-\- Docker Compose
+- GitHub Actions
 
-\- Kubernetes
+- Container registry
 
-\- GitHub Actions
+- Apache Kafka infrastructure
 
-\- Container registry
+- Redis
 
-\- Apache Kafka infrastructure
+- Configuration and secrets
 
-\- Redis
+- Prometheus
 
-\- Configuration and secrets
+- Grafana
 
-\- Prometheus
+- Logging
 
-\- Grafana
+- Security scanning
 
-\- Logging
+- Deployment
 
-\- Security scanning
+---
 
-\- Deployment
+## 3. Architecture Principles
 
-
-
-\---
-
-
-
-\## 3. Architecture Principles
-
-
-
-\### Independent ML Service
-
-
+### Independent ML Service
 
 ML functionality will be implemented as an independent service.
 
-
-
 Domain services must not contain the ML implementation directly.
 
-
-
-\### Explainable AI
-
-
+### Explainable AI
 
 AI predictions should provide understandable factors where practical.
 
-
-
 For example:
-
-
 
 Match Score: 94%
 
-
-
 Reasons:
 
-\- Required skills strongly matched
+- Required skills strongly matched
 
-\- Experience requirement satisfied
+- Experience requirement satisfied
 
-\- Location compatible
+- Location compatible
 
-\- Availability compatible
+- Availability compatible
 
-\- Payment expectation compatible
+- Payment expectation compatible
 
-
-
-\### Data Integrity
-
-
+### Data Integrity
 
 Training datasets must not be invented.
 
-
-
 Each ML model must document:
 
+- Data source
 
+- Features
 
-\- Data source
+- Labels
 
-\- Features
+- Data quality
 
-\- Labels
+- Training strategy
 
-\- Data quality
+- Validation strategy
 
-\- Training strategy
+- Test strategy
 
-\- Validation strategy
+- Leakage controls
 
-\- Test strategy
+- Baseline
 
-\- Leakage controls
+- Evaluation metrics
 
-\- Baseline
+- Limitations
 
-\- Evaluation metrics
-
-\- Limitations
-
-
-
-\### Human Decision Making
-
-
+### Human Decision Making
 
 ML predictions support users and administrators.
 
-
-
 ML predictions should not automatically:
 
+- Ban users
 
+- Reject legitimate applications
 
-\- Ban users
+- Freeze financial accounts
 
-\- Reject legitimate applications
+- Make irreversible decisions
 
-\- Freeze financial accounts
+---
 
-\- Make irreversible decisions
-
-
-
-\---
-
-
-
-\## 4. ML API Boundary
-
-
+## 4. ML API Boundary
 
 Initial ML APIs:
 
+POST /api/v1/ml/match
 
+POST /api/v1/ml/recommend
 
-POST /api/ml/match
+POST /api/v1/ml/pricing
 
+POST /api/v1/ml/fraud
 
-
-POST /api/ml/recommend
-
-
-
-POST /api/ml/pricing
-
-
-
-POST /api/ml/fraud
-
-
-
-POST /api/ml/sentiment
-
-
+POST /api/v1/ml/sentiment
 
 Additional APIs may be introduced when justified.
 
+---
 
-
-\---
-
-
-
-\## 5. Matching
-
-
+## 5. Matching
 
 Matching may consider:
 
+### Job
 
+- Required skills
 
-\### Job
+- Experience
 
+- Category
 
+- Location
 
-\- Required skills
+- Schedule
 
-\- Experience
+- Payment
 
-\- Category
+### Worker
 
-\- Location
+- Skills
 
-\- Schedule
+- Experience
 
-\- Payment
+- Availability
 
+- Location
 
+- Expected payment
 
-\### Worker
+- Work history
 
+- Ratings
 
-
-\- Skills
-
-\- Experience
-
-\- Availability
-
-\- Location
-
-\- Expected payment
-
-\- Work history
-
-\- Ratings
-
-\- Reliability
-
-
+- Reliability
 
 The system should return an explainable match score.
 
+---
 
-
-\---
-
-
-
-\## 6. Recommendations
-
-
+## 6. Recommendations
 
 Potential recommendation features:
 
+- Worker profile
 
+- Skills
 
-\- Worker profile
+- Experience
 
-\- Skills
+- Location
 
-\- Experience
+- Availability
 
-\- Location
+- Search history
 
-\- Availability
+- Applications
 
-\- Search history
+- Previous jobs
 
-\- Applications
-
-\- Previous jobs
-
-\- Preferences
-
-
+- Preferences
 
 The recommendation system will begin with a simple baseline and improve progressively.
 
+---
 
-
-\---
-
-
-
-\## 7. Fair Payment Estimation
-
-
+## 7. Fair Payment Estimation
 
 The system may estimate a typical payment range for a job.
 
-
-
 Example:
-
-
 
 Typical payment range:
 
 Rs. 7,000–9,000
 
-
-
 Neutral warning:
-
-
 
 "Payment may be below the typical range for similar jobs."
 
-
-
 The final payment decision remains with the platform users.
-
-
 
 Member 3 owns the actual commission calculation.
 
+---
 
-
-\---
-
-
-
-\## 8. Fraud / Risk Detection
-
-
+## 8. Fraud / Risk Detection
 
 Potential fraud signals include:
 
+- Suspicious accounts
 
+- Suspicious jobs
 
-\- Suspicious accounts
+- Payment patterns
 
-\- Suspicious jobs
+- Abnormal behavior
 
-\- Payment patterns
+- Reviews
 
-\- Abnormal behavior
+- Messages
 
-\- Reviews
-
-\- Messages
-
-\- Application patterns
-
-
+- Application patterns
 
 The ML system should return:
 
+- Risk score
 
+- Risk category
 
-\- Risk score
-
-\- Risk category
-
-\- Supporting signals
-
-
+- Supporting signals
 
 Fraud predictions should support administrator investigation.
 
+---
 
-
-\---
-
-
-
-\## 9. Review Analysis
-
-
+## 9. Review Analysis
 
 Review analysis may include:
 
+- Sentiment
 
+- Themes
 
-\- Sentiment
+- Similarity
 
-\- Themes
+- Rating anomalies
 
-\- Similarity
+- Timing anomalies
 
-\- Rating anomalies
+---
 
-\- Timing anomalies
-
-
-
-\---
-
-
-
-\## 10. Demand Forecasting
-
-
+## 10. Demand Forecasting
 
 Demand may be forecast using historical job data.
 
-
-
 Possible dimensions:
 
+- Job category
 
+- Time period
 
-\- Job category
+- Location
 
-\- Time period
+---
 
-\- Location
-
-
-
-\---
-
-
-
-\## 11. Semantic / Vector Search
-
-
+## 11. Semantic / Vector Search
 
 Planned architecture:
-
-
 
 Worker profiles / Job descriptions
 
@@ -494,91 +336,65 @@ Worker profiles / Job descriptions
 
 &#x20;Search / Matching / Recommendation
 
-
-
 Domain services should communicate through clean APIs rather than
 
 being tightly coupled to the vector database.
 
+---
 
-
-\---
-
-
-
-\## 12. Docker Principles
-
-
+## 12. Docker Principles
 
 Containers should:
 
+- Use multi-stage builds where useful
 
+- Use minimal base images
 
-\- Use multi-stage builds where useful
+- Run as non-root where practical
 
-\- Use minimal base images
+- Include health checks
 
-\- Run as non-root where practical
+- Use environment-based configuration
 
-\- Include health checks
+- Never contain secrets
 
-\- Use environment-based configuration
+- Be reproducible
 
-\- Never contain secrets
+---
 
-\- Be reproducible
-
-
-
-\---
-
-
-
-\## 13. Kubernetes Principles
-
-
+## 13. Kubernetes Principles
 
 Kubernetes will use only components justified by the project:
 
+- Namespace
 
+- Deployments
 
-\- Namespace
+- Services
 
-\- Deployments
+- Ingress
 
-\- Services
+- ConfigMaps
 
-\- Ingress
+- Secrets
 
-\- ConfigMaps
+- RBAC
 
-\- Secrets
+- Network Policies
 
-\- RBAC
+- Resource limits
 
-\- Network Policies
+- Readiness probes
 
-\- Resource limits
+- Liveness probes
 
-\- Readiness probes
+- Horizontal Pod Autoscaling where justified
 
-\- Liveness probes
+---
 
-\- Horizontal Pod Autoscaling where justified
-
-
-
-\---
-
-
-
-\## 14. CI/CD
-
-
+## 14. CI/CD
 
 Target pipeline:
-
-
 
 Git Push / Pull Request
 
@@ -630,183 +446,138 @@ Container Registry
 
 Staging Deployment
 
+---
 
-
-\---
-
-
-
-\## 15. Kafka
-
-
+## 15. Kafka
 
 Member 4 owns Kafka infrastructure and platform configuration.
 
-
-
 Application members own their application event logic.
-
-
 
 Each event should document:
 
+- Topic
 
+- Producer
 
-\- Topic
+- Consumer
 
-\- Producer
+- Schema
 
-\- Consumer
+- Version
 
-\- Schema
+- Retry strategy
 
-\- Version
+- Dead-letter strategy where required
 
-\- Retry strategy
+---
 
-\- Dead-letter strategy where required
-
-
-
-\---
-
-
-
-\## 16. Redis
-
-
+## 16. Redis
 
 Redis may be used for:
 
+- Caching
 
+- Rate limiting
 
-\- Caching
+- Temporary state
 
-\- Rate limiting
-
-\- Temporary state
-
-\- Appropriate distributed locks
-
-
+- Appropriate distributed locks
 
 Redis must not be used as permanent financial storage.
 
+---
 
-
-\---
-
-
-
-\## 17. Monitoring
-
-
+## 17. Monitoring
 
 The platform should monitor:
 
+- API latency
 
+- API errors
 
-\- API latency
+- Authentication failures
 
-\- API errors
+- Payment failures
 
-\- Authentication failures
+- Kafka health
 
-\- Payment failures
+- Database health
 
-\- Kafka health
+- Redis health
 
-\- Database health
+- Pod resources
 
-\- Redis health
+- Pod restarts
 
-\- Pod resources
+- ML inference errors
 
-\- Pod restarts
-
-\- ML inference errors
-
-\- Security events
-
-
+- Security events
 
 Target observability stack:
 
-
-
 Prometheus + Grafana + centralized logging
 
+---
 
-
-\---
-
-
-
-\## 18. Security
-
-
+## 18. Security
 
 Security controls include:
 
+- Secrets management
 
+- Kubernetes RBAC
 
-\- Secrets management
+- Network policies
 
-\- Kubernetes RBAC
+- TLS
 
-\- Network policies
+- Container scanning
 
-\- TLS
+- Dependency scanning
 
-\- Container scanning
+- SAST
 
-\- Dependency scanning
+- Non-root containers
 
-\- SAST
+- Minimal images
 
-\- Non-root containers
+- Secure CI/CD
 
-\- Minimal images
+- Audit logging
 
-\- Secure CI/CD
+---
 
-\- Audit logging
-
-
-
-\---
-
-
-
-\## 19. Current Status
-
-
+## 19. Current Status
 
 Initial Member 4 platform documentation has been created.
-
-
 
 The following will be finalized after Members 1–3 provide their
 
 technology stacks and service architecture:
 
+- Backend integration
 
+- Database integration
 
-\- Backend integration
+- Kafka event contracts
 
-\- Database integration
+- Authentication integration
 
-\- Kafka event contracts
+- Redis integration
 
-\- Authentication integration
+- Docker Compose services
 
-\- Redis integration
+- Kubernetes deployments
 
-\- Docker Compose services
+- ML API integration
 
-\- Kubernetes deployments
+- Service-to-service communication
 
-\- ML API integration
+## Integration planning reference
 
-\- Service-to-service communication
+See the [Unified Architecture](unified-architecture.md) for the latest
+cross-member integration proposal and open decision register.
 
+This document describes Member 4's scope. Shared implementation
+choices remain proposals until confirmed by their relevant owners.

@@ -1,16 +1,10 @@
-\# GigZLK AI/ML Architecture
+# GigZLK AI/ML Architecture
 
-
-
-\## 1. Purpose
-
-
+## 1. Purpose
 
 The GigZLK AI/ML platform provides intelligent capabilities to
 
 support workers, publishers and administrators.
-
-
 
 The ML system is designed as an independent service so that the
 
@@ -18,421 +12,273 @@ core business services remain independent from ML implementation
 
 details.
 
+---
 
-
-\---
-
-
-
-\## 2. ML Service
-
-
+## 2. ML Service
 
 The planned ML service will expose APIs for:
 
+- Job-worker matching
 
+- Job recommendations
 
-\- Job-worker matching
+- Fair payment estimation
 
-\- Job recommendations
+- Fraud/risk detection
 
-\- Fair payment estimation
-
-\- Fraud/risk detection
-
-\- Review sentiment analysis
-
-
+- Review sentiment analysis
 
 Initial endpoints:
 
+POST /api/v1/ml/match
 
+POST /api/v1/ml/recommend
 
-POST /api/ml/match
+POST /api/v1/ml/pricing
 
+POST /api/v1/ml/fraud
 
-
-POST /api/ml/recommend
-
-
-
-POST /api/ml/pricing
-
-
-
-POST /api/ml/fraud
-
-
-
-POST /api/ml/sentiment
-
-
+POST /api/v1/ml/sentiment
 
 Additional endpoints may be added when justified.
 
+---
 
+## 3. Job-Worker Matching
 
-\---
-
-
-
-\## 3. Job-Worker Matching
-
-
-
-\### Job Features
-
-
+### Job Features
 
 Potential job features:
 
+- Skills
 
+- Experience requirement
 
-\- Skills
+- Job category
 
-\- Experience requirement
+- Location
 
-\- Job category
+- Schedule
 
-\- Location
+- Payment
 
-\- Schedule
+- Job history
 
-\- Payment
+- Job quality indicators
 
-\- Job history
-
-\- Job quality indicators
-
-
-
-\### Worker Features
-
-
+### Worker Features
 
 Potential worker features:
 
+- Skills
 
+- Experience
 
-\- Skills
+- Availability
 
-\- Experience
+- Location
 
-\- Availability
+- Expected payment
 
-\- Location
+- Previous jobs
 
-\- Expected payment
+- Ratings
 
-\- Previous jobs
+- Reliability
 
-\- Ratings
-
-\- Reliability
-
-
-
-\### Output
-
-
+### Output
 
 The matching API should return:
 
+- Match score
 
+- Matching factors
 
-\- Match score
-
-\- Matching factors
-
-\- Explanation
-
-
+- Explanation
 
 Example:
 
-
-
 94% Match
-
-
 
 Reasons:
 
+- Required skills strongly matched
 
+- Experience requirement satisfied
 
-\- Required skills strongly matched
+- Worker availability compatible
 
-\- Experience requirement satisfied
+- Location compatible
 
-\- Worker availability compatible
-
-\- Location compatible
-
-\- Payment expectation compatible
-
-
+- Payment expectation compatible
 
 The score must be explainable and should not be presented as an
 
 absolute guarantee of suitability.
 
+---
 
-
-\---
-
-
-
-\## 4. Recommendations
-
-
+## 4. Recommendations
 
 Recommendations may use:
 
+- Worker profile
 
+- Skills
 
-\- Worker profile
+- Experience
 
-\- Skills
+- Location
 
-\- Experience
+- Availability
 
-\- Location
+- Search history
 
-\- Availability
+- Applications
 
-\- Search history
+- Previous jobs
 
-\- Applications
-
-\- Previous jobs
-
-\- Preferences
-
-
+- Preferences
 
 The system should begin with a simple baseline.
 
-
-
 Possible progression:
 
+1. Rule-based filtering
 
+2. Content-based recommendation
 
-1\. Rule-based filtering
+3. Hybrid recommendation
 
-2\. Content-based recommendation
+4. More advanced models if sufficient data becomes available
 
-3\. Hybrid recommendation
+---
 
-4\. More advanced models if sufficient data becomes available
-
-
-
-\---
-
-
-
-\## 5. Payment Estimation
-
-
+## 5. Payment Estimation
 
 The pricing model estimates a typical payment range for similar
 
 jobs.
 
-
-
 Example:
-
-
 
 Typical payment range:
 
 Rs. 7,000–9,000
 
-
-
 The platform may display:
-
-
 
 "Payment may be below the typical range for similar jobs."
 
-
-
 The model provides an estimate only.
-
-
 
 Users retain control over the final payment amount.
 
-
-
 Commission calculation is owned by Member 3.
 
+---
 
-
-\---
-
-
-
-\## 6. Fraud / Risk Detection
-
-
+## 6. Fraud / Risk Detection
 
 Fraud detection may consider:
 
+- Account activity
 
+- Job creation patterns
 
-\- Account activity
+- Applications
 
-\- Job creation patterns
+- Payment behavior
 
-\- Applications
+- Reviews
 
-\- Payment behavior
+- Messages
 
-\- Reviews
+- Repeated suspicious actions
 
-\- Messages
-
-\- Repeated suspicious actions
-
-\- Unusual behavioral patterns
-
-
+- Unusual behavioral patterns
 
 The output should include:
 
+- Risk score
 
+- Risk category
 
-\- Risk score
-
-\- Risk category
-
-\- Supporting signals
-
-
+- Supporting signals
 
 Example:
 
-
-
 Risk Score: 78%
-
-
 
 Risk Category:
 
 HIGH
 
-
-
 Supporting signals:
 
+- Unusual payment activity
 
+- Multiple suspicious account interactions
 
-\- Unusual payment activity
-
-\- Multiple suspicious account interactions
-
-\- Abnormal review pattern
-
-
+- Abnormal review pattern
 
 The model must not automatically ban a user based only on an ML
 
 prediction.
 
-
-
 Administrators should be able to investigate flagged cases.
 
+---
 
-
-\---
-
-
-
-\## 7. Review Analysis
-
-
+## 7. Review Analysis
 
 Review analysis may include:
 
+### Sentiment
 
+- Positive
 
-\### Sentiment
+- Neutral
 
+- Negative
 
+### Additional Analysis
 
-\- Positive
+- Review themes
 
-\- Neutral
+- Similarity
 
-\- Negative
+- Rating anomalies
 
+- Review timing anomalies
 
+- Potential coordinated review behavior
 
-\### Additional Analysis
+---
 
-
-
-\- Review themes
-
-\- Similarity
-
-\- Rating anomalies
-
-\- Review timing anomalies
-
-\- Potential coordinated review behavior
-
-
-
-\---
-
-
-
-\## 8. Demand Forecasting
-
-
+## 8. Demand Forecasting
 
 Demand forecasting may predict job demand by:
 
+- Category
 
+- Location
 
-\- Category
-
-\- Location
-
-\- Time period
-
-
+- Time period
 
 Potential outputs:
 
+- Expected demand
 
+- Demand trend
 
-\- Expected demand
+- Confidence / uncertainty information
 
-\- Demand trend
+---
 
-\- Confidence / uncertainty information
-
-
-
-\---
-
-
-
-\## 9. Semantic / Vector Search
-
-
+## 9. Semantic / Vector Search
 
 Semantic search architecture:
-
-
 
 Job descriptions
 
@@ -474,201 +320,129 @@ Semantic similarity
 
 Search / matching / recommendation
 
-
-
 The vector database should not become a direct dependency for every
 
 business service.
 
-
-
 The ML platform should expose clean APIs around semantic search.
 
+---
 
-
-\---
-
-
-
-\## 10. Data Strategy
-
-
+## 10. Data Strategy
 
 No datasets should be invented.
 
-
-
 For every model we must document:
 
+### Dataset
 
+- Source
 
-\### Dataset
+- Collection method
 
+- Size
 
+- Features
 
-\- Source
+- Labels
 
-\- Collection method
+- Missing values
 
-\- Size
+- Data quality
 
-\- Features
-
-\- Labels
-
-\- Missing values
-
-\- Data quality
-
-
-
-\### Splitting
-
-
+### Splitting
 
 Where appropriate:
 
+- Training set
 
+- Validation set
 
-\- Training set
+- Test set
 
-\- Validation set
-
-\- Test set
-
-
-
-\### Leakage Prevention
-
-
+### Leakage Prevention
 
 Training information must not contain information that would only
 
 be available after the prediction point.
 
-
-
-\### Baseline
-
-
+### Baseline
 
 Each ML task should have a simple baseline before introducing a
 
 more complex model.
 
-
-
-\### Evaluation
-
-
+### Evaluation
 
 Metrics should match the problem.
 
-
-
 Examples:
-
-
 
 Matching:
 
+- Precision
 
+- Recall
 
-\- Precision
+- F1
 
-\- Recall
-
-\- F1
-
-\- Ranking metrics
-
-
+- Ranking metrics
 
 Recommendation:
 
+- Precision@K
 
+- Recall@K
 
-\- Precision@K
-
-\- Recall@K
-
-\- NDCG@K
-
-
+- NDCG@K
 
 Pricing:
 
+- MAE
 
+- RMSE
 
-\- MAE
-
-\- RMSE
-
-\- Prediction interval coverage where applicable
-
-
+- Prediction interval coverage where applicable
 
 Fraud:
 
+- Precision
 
+- Recall
 
-\- Precision
+- F1
 
-\- Recall
-
-\- F1
-
-\- PR-AUC
-
-
+- PR-AUC
 
 Classification:
 
+- Accuracy
 
+- Precision
 
-\- Accuracy
+- Recall
 
-\- Precision
-
-\- Recall
-
-\- F1
-
-
+- F1
 
 Forecasting:
 
+- MAE
 
+- RMSE
 
-\- MAE
+- MAPE where appropriate
 
-\- RMSE
+---
 
-\- MAPE where appropriate
-
-
-
-\---
-
-
-
-\## 11. Explainability
-
-
+## 11. Explainability
 
 Where possible, predictions should expose useful contributing
 
 factors.
 
-
-
 Example:
 
-
-
 Match Score: 94%
-
-
 
 Skill compatibility: High
 
@@ -680,65 +454,43 @@ Location compatibility: High
 
 Payment compatibility: High
 
-
-
 The exact implementation will depend on the selected model.
 
+---
 
-
-\---
-
-
-
-\## 12. ML Limitations
-
-
+## 12. ML Limitations
 
 Potential limitations include:
 
+- Limited historical data
 
+- Cold-start users
 
-\- Limited historical data
+- Dataset bias
 
-\- Cold-start users
+- Incomplete profiles
 
-\- Dataset bias
+- Changing job-market conditions
 
-\- Incomplete profiles
+- Model drift
 
-\- Changing job-market conditions
-
-\- Model drift
-
-\- Incorrect or noisy user-generated data
-
-
+- Incorrect or noisy user-generated data
 
 These limitations must be documented in the final project.
 
+---
 
-
-\---
-
-
-
-\## 13. ML API Design Principle
-
-
+## 13. ML API Design Principle
 
 Business services should call the ML service through APIs.
 
-
-
 Example:
-
-
 
 Job Service
 
 &#x20;   |
 
-&#x20;   | POST /api/ml/match
+&#x20;   | POST /api/v1/ml/match
 
 &#x20;   v
 
@@ -762,97 +514,70 @@ Prediction
 
 Job Service
 
-
-
 ML implementation details should remain inside the ML service.
 
+---
 
-
-\---
-
-
-
-\## 14. Development Strategy
-
-
+## 14. Development Strategy
 
 The ML system will be developed progressively.
-
-
 
 Phase 1:
 
 Working baseline
 
-
-
 Phase 2:
 
 Data validation and evaluation
-
-
 
 Phase 3:
 
 Improved model
 
-
-
 Phase 4:
 
 Explainability
-
-
 
 Phase 5:
 
 Production API
 
-
-
 Phase 6:
 
 Monitoring
-
-
 
 Phase 7:
 
 Optimization if justified
 
-
-
 Complex models should only be introduced when the available data
 
 and evaluation results justify them.
 
+---
 
-
-\---
-
-
-
-\## 15. Current Status
-
-
+## 15. Current Status
 
 ML architecture and responsibilities have been documented.
 
-
-
 Model implementation will begin after the team confirms:
 
+- Backend architecture
 
+- Database structure
 
-\- Backend architecture
+- Available data
 
-\- Database structure
+- API contracts
 
-\- Available data
+- Event contracts
 
-\- API contracts
+- Authentication approach
 
-\- Event contracts
+## Integration planning reference
 
-\- Authentication approach
+See the [Unified Architecture](../architecture/unified-architecture.md) for the latest
+cross-member integration proposal and open decision register.
 
+This document describes Member 4's scope. Shared implementation
+choices remain proposals until confirmed by their relevant owners.
