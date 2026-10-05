@@ -1,0 +1,48 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# ML
+ml-service/data/*
+ml-service/models/*
+!ml-service/data/.gitkeep
+!ml-service/models/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+
+# Build
+dist/
+build/
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Secrets
+*.pem
+*.key
+*.crt
