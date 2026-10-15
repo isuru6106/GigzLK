@@ -3,7 +3,7 @@
 ## Scope
 
 This setup runs PostgreSQL for local GigZLK development.
-Redis, Kafka and application containers are not included yet.
+Redis is also available; see the Redis section below. Kafka and application containers are not included yet.
 
 Requirements:
 - Docker Desktop running Linux containers
@@ -144,3 +144,57 @@ administrators. Keep Docker access and local configuration restricted.
 
 Do not paste .env contents or resolved Compose configuration into
 issues, chat messages or logs.
+
+## Redis
+
+Redis holds temporary data such as caches, typing indicators and
+rate-limit counters. PostgreSQL remains the durable source of truth.
+
+Fresh setups:
+setup-local.ps1 now generates REDIS_PASSWORD as well as database passwords.
+
+Existing setups:
+preserve your .env and database passwords. Add REDIS_HOST_PORT=6379
+and a locally generated REDIS_PASSWORD before starting Redis.
+Do not delete or regenerate working database credentials.
+
+Start Redis from the repository root:
+
+```powershell
+docker compose --env-file infrastructure/docker/.env -f infrastructure/docker/compose.yaml up -d --wait redis
+```
+
+Connection settings:
+- Windows applications: 127.0.0.1:6379
+- Containers on the Compose network: redis:6379
+- Password: REDIS_PASSWORD from your local .env
+
+The current local setup uses one shared Redis password.
+Key prefixes organize data; they do not enforce service isolation.
+Service-specific ACLs are not configured yet.
+
+Use service-specific keys, for example:
+gigzlk:job:details:123
+gigzlk:chat:typing:456
+
+Define TTLs and cache invalidation rules in each owning service.
+Do not put secrets or personal details in key names.
+
+Persistence is disabled. Redis data is lost when its process restarts.
+The dataset memory limit is 128 MB; total process memory can be higher.
+The noeviction policy rejects memory-growing writes at the limit
+rather than automatically evicting keys.
+
+Services must handle Redis outages and write failures explicitly.
+Security controls must not silently allow requests when Redis fails.
+Financial balances and durable idempotency remain in PostgreSQL.
+
+Validation completed:
+- Authenticated PING returned PONG.
+- Unauthenticated PING returned NOAUTH.
+- A test value was readable before expiry.
+- EXISTS returned 0 after its five-second TTL expired.
+
+The Compose health check authenticates before checking PING.
+Passwords in environment variables and startup arguments are visible
+to Docker administrators. This is a local development configuration.

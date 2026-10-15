@@ -29,5 +29,30 @@ services:
       retries: 10
       start_period: 10s
 
+  redis:
+    image: redis:7.4-bookworm
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    command:
+      - sh
+      - -ec
+      - |
+        exec docker-entrypoint.sh redis-server \
+          --requirepass "$$REDIS_PASSWORD" \
+          --save "" \
+          --appendonly no \
+          --maxmemory 128mb \
+          --maxmemory-policy noeviction
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli --raw ping | grep -qx PONG'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
 volumes:
   postgres_data:
