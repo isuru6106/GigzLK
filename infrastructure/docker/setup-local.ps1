@@ -15,7 +15,7 @@ $text = [System.IO.File]::ReadAllText($examplePath)
 $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 
 try {
-    $keys = @('POSTGRES_ADMIN_PASSWORD') + @(
+    $keys = @('POSTGRES_ADMIN_PASSWORD', 'REDIS_PASSWORD') + @(
         'AUTH', 'USER', 'JOB', 'APPLICATION', 'CONTRACT',
         'PAYMENT', 'OPERATIONS', 'CHAT', 'NOTIFICATION', 'ML'
     ).ForEach({ "${_}_DB_PASSWORD" })
