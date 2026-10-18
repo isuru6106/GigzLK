@@ -1,0 +1,58 @@
+name: gigzlk-local
+
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: gigzlk_admin
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Set POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: postgres
+      ML_DB_PASSWORD: ${ML_DB_PASSWORD:?Set ML_DB_PASSWORD}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Set NOTIFICATION_DB_PASSWORD}
+      CHAT_DB_PASSWORD: ${CHAT_DB_PASSWORD:?Set CHAT_DB_PASSWORD}
+      OPERATIONS_DB_PASSWORD: ${OPERATIONS_DB_PASSWORD:?Set OPERATIONS_DB_PASSWORD}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?Set PAYMENT_DB_PASSWORD}
+      CONTRACT_DB_PASSWORD: ${CONTRACT_DB_PASSWORD:?Set CONTRACT_DB_PASSWORD}
+      APPLICATION_DB_PASSWORD: ${APPLICATION_DB_PASSWORD:?Set APPLICATION_DB_PASSWORD}
+      JOB_DB_PASSWORD: ${JOB_DB_PASSWORD:?Set JOB_DB_PASSWORD}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:?Set USER_DB_PASSWORD}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gigzlk_admin -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7.4-bookworm
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    command:
+      - sh
+      - -ec
+      - |
+        exec docker-entrypoint.sh redis-server \
+          --requirepass "$$REDIS_PASSWORD" \
+          --save "" \
+          --appendonly no \
+          --maxmemory 128mb \
+          --maxmemory-policy noeviction
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli --raw ping | grep -qx PONG'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  postgres_data:
