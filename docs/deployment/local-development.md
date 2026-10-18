@@ -3,7 +3,7 @@
 ## Scope
 
 This setup runs PostgreSQL for local GigZLK development.
-Redis is also available; see the Redis section below. Kafka and application containers are not included yet.
+Redis and Kafka are also available; see their sections below. Application containers are not included yet.
 
 Requirements:
 - Docker Desktop running Linux containers
@@ -198,3 +198,84 @@ Validation completed:
 The Compose health check authenticates before checking PING.
 Passwords in environment variables and startup arguments are visible
 to Docker administrators. This is a local development configuration.
+
+## Kafka
+
+The local setup uses Apache Kafka 4.3.1 in combined broker/controller
+KRaft mode. No separate ZooKeeper service is required.
+
+Start Kafka:
+
+```powershell
+docker compose --env-file infrastructure/docker/.env -f infrastructure/docker/compose.yaml up -d --wait kafka
+```
+
+Connection addresses:
+- Windows clients: 127.0.0.1:9092
+- Containers on the Compose network: kafka:29092
+- Controller: kafka:9093, internal only
+
+The host listener explicitly advertises IPv4 to avoid localhost
+resolving to an unpublished IPv6 address.
+
+This setup uses plaintext without authentication or ACLs.
+Only the host listener is published, bound to 127.0.0.1.
+Containers on the Compose network can access the internal listener.
+Use only local test data. Production security is not configured.
+
+There is one broker and replication factor 1: no broker redundancy.
+The named volume gigzlk-local_kafka_data retains logs and metadata.
+Keep the configured cluster ID unchanged when reusing that volume.
+
+Default event retention is 24 hours. Cleanup is periodic and
+segment-based; this is not an exact per-message expiry timer.
+Automatic topic creation is disabled.
+
+Create the infrastructure test topic:
+
+```powershell
+docker compose --env-file infrastructure/docker/.env -f infrastructure/docker/compose.yaml exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic gigzlk.test.events.v1 --partitions 1 --replication-factor 1
+```
+
+This topic is for smoke tests, not an agreed business event contract.
+
+### Windows smoke test
+
+Requires Python 3.13 for the tested setup:
+
+```powershell
+py -3.13 -m venv infrastructure/kafka/.venv
+.\infrastructure\kafka\.venv\Scripts\python.exe -m pip install --only-binary=:all: -r infrastructure/kafka/requirements.txt
+.\infrastructure\kafka\.venv\Scripts\python.exe infrastructure/kafka/smoke_test.py
+```
+
+Run environment creation and installation only for initial setup.
+The virtual environment is ignored by Git.
+
+The test publishes a unique message, checks delivery confirmation
+and consumes the matching message using a new consumer group.
+It adds a test record on each run and does not commit consumer offsets.
+
+Expected result:
+PASS: Windows produced and consumed the unique test message.
+
+Acks=all means all current in-sync replicas acknowledge the write.
+With this single-broker setup, that is only one replica.
+
+Validation completed:
+- Broker health check passed.
+- Container producer/consumer round trip passed.
+- A retained message remained readable after container recreation.
+- Windows producer/consumer round trip passed using IPv4.
+
+If Kafka is unhealthy, inspect:
+
+```powershell
+docker compose --env-file infrastructure/docker/.env -f infrastructure/docker/compose.yaml logs --tail 100 kafka
+```
+
+Use normal Compose stop/down commands to retain named volumes.
+Do not use down -v unless intentionally deleting persistent local data.
+
+Business topic schemas, producers, consumers, retries and dead-letter
+handling remain separate integration work with the domain owners.
