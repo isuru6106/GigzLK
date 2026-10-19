@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.config import Settings
+from app.matching_routes import router as matching_router
 
 
 @asynccontextmanager
@@ -17,6 +18,7 @@ async def lifespan(application: FastAPI):
 
 def create_app() -> FastAPI:
     settings = Settings()
+
     application = FastAPI(
         title="GigZLK ML Service",
         version="0.1.0",
@@ -25,7 +27,9 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if settings.docs_enabled else None,
         lifespan=lifespan,
     )
+
     application.state.ready = False
+    application.include_router(matching_router)
 
     @application.get("/health/live", tags=["health"])
     async def live():
@@ -36,8 +40,12 @@ def create_app() -> FastAPI:
         if not request.app.state.ready:
             return JSONResponse(
                 status_code=503,
-                content={"status": "NOT_READY", "service": "ml-service"},
+                content={
+                    "status": "NOT_READY",
+                    "service": "ml-service",
+                },
             )
+
         return {"status": "READY", "service": "ml-service"}
 
     return application

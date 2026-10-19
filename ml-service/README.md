@@ -132,3 +132,29 @@ Financial decisions remain owned by Payment Service.
 Only health and documentation routes exist.
 Authentication and gateway integration must precede exposure of
 future sensitive ML endpoints outside local development.
+
+
+## Job-worker matching
+
+POST /api/v1/ml/match accepts job and worker snapshots and returns
+an explainable rule-based suitability assessment.
+
+Scoring version: rules-v1.
+
+Weights:
+- Skills: 50%
+- Relevant experience: 20%
+- Availability: 20%
+- Location: 10%
+
+Unknown required worker information produces an INCOMPLETE assessment
+with a null overall score. Known schedule and location mismatches
+remain visible in warnings.
+
+This score is not a hiring probability. Domain services retain final
+eligibility and assignment checks.
+
+The matching endpoint currently has no caller authentication.
+Use synthetic data on loopback only until authorization is implemented.
+
+See ../docs/ml/matching-v1.md for the proposed contract and boundaries.
