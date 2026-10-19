@@ -1,24 +1,66 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
+import { DatabaseService } from './../src/database.service';
 
 describe('Auth health (e2e)', () => {
   let app: INestApplication<App>;
+  const database = { checkReadiness: jest.fn() };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(DatabaseService)
+      .useValue(database)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
   });
 
-  it.each(['/health/live', '/health/ready'])('GET %s', async (path) => {
+  beforeEach(() => {
+    database.checkReadiness.mockReset();
+    database.checkReadiness.mockResolvedValue(undefined);
+  });
+
+  it('reports liveness without accessing the database', async () => {
     await request(app.getHttpServer())
-      .get(path)
+      .get('/health/live')
+      .expect(200)
+      .expect({ status: 'UP', service: 'auth' });
+
+    expect(database.checkReadiness).not.toHaveBeenCalled();
+  });
+
+  it('reports readiness when the database is available', async () => {
+    await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(200)
+      .expect({ status: 'UP', service: 'auth' });
+
+    expect(database.checkReadiness).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a safe 503 during failure and recovers afterward', async () => {
+    database.checkReadiness.mockRejectedValueOnce(
+      new Error('Sensitive database connection details'),
+    );
+
+    await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(503)
+      .expect({ status: 'DOWN', service: 'auth' });
+
+    await request(app.getHttpServer())
+      .get('/health/live')
+      .expect(200)
+      .expect({ status: 'UP', service: 'auth' });
+
+    await request(app.getHttpServer())
+      .get('/health/ready')
       .expect(200)
       .expect({ status: 'UP', service: 'auth' });
   });

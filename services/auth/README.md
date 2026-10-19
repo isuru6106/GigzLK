@@ -28,7 +28,9 @@ Never use the PostgreSQL administrator login in application code.
 
 Keep credentials in an ignored services/auth/.env file.
 Prisma CLI loads this file through prisma.config.ts.
-The NestJS application does not currently load .env or connect to PostgreSQL.
+The application requires DATABASE_URL in its environment. For local execution,
+use node --env-file=.env dist/main.js after building. Database connections are
+opened on demand and closed during application shutdown.
 
 ## Local development
 
@@ -38,7 +40,8 @@ Run from services/auth after configuring DATABASE_URL:
 npm.cmd ci
 npm.cmd run prisma:generate
 npx.cmd --no-install prisma migrate deploy
-npm.cmd run start:dev
+npm.cmd run build
+node --env-file=.env dist/main.js
 ```
 
 Generated Prisma source is excluded from Git.
@@ -90,7 +93,7 @@ Run from services/auth:
 
 ```powershell
 docker build -t gigzlk-auth:local .
-docker run --rm -p 127.0.0.1:3006:3006 gigzlk-auth:local
+docker run --rm --env-file .env.docker -p 127.0.0.1:3006:3006 gigzlk-auth:local
 ```
 
 Client generation uses a dummy build URL without connecting to a database.
@@ -103,3 +106,8 @@ Press Ctrl+C to stop the foreground container.
 Browser authentication and service-token contracts remain proposals.
 Shared Compose and CI configuration are coordinated by Member 4.
 Worker profiles, skills and availability belong to User Service.
+
+For Docker Desktop, supply DATABASE_URL through an ignored .env.docker file.
+Use host.docker.internal:5433 to reach the host-published PostgreSQL port;
+127.0.0.1 inside the Auth container refers to that container itself.
+Never commit this file or its credentials.
