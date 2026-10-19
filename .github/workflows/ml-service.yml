@@ -38,12 +38,12 @@ jobs:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: |
-            ml-service/requirements.txt
-            ml-service/requirements-dev.txt
+            ml-service/requirements-lock.txt
+            ml-service/requirements-dev-lock.txt
 
       - name: Install dependencies
         working-directory: ml-service
-        run: python -m pip install -r requirements-dev.txt
+        run: python -m pip install -r requirements-dev-lock.txt
 
       - name: Check dependencies
         run: python -m pip check

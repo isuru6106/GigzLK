@@ -21,7 +21,7 @@ Run from the repository root. Python 3.13 is the tested runtime.
 
 ```powershell
 py -3.13 -m venv ml-service/.venv
-.\ml-service\.venv\Scripts\python.exe -m pip install -r ml-service/requirements-dev.txt
+.\ml-service\.venv\Scripts\python.exe -m pip install -r ml-service/requirements-dev-lock.txt
 ```
 
 Start the API:
@@ -110,8 +110,19 @@ docker compose --env-file infrastructure/docker/.env -f infrastructure/docker/co
 - Readiness-based Docker health check
 - No credentials or local virtual environment copied into the image
 
-Direct requirements are version-pinned.
-Transitive dependencies and the base image are not fully locked.
+Runtime and test dependency versions are pinned in requirements-lock.txt
+and requirements-dev-lock.txt for Python 3.13.
+
+Docker installs the runtime lock. Local development and CI install the
+development lock, which includes the runtime lock.
+
+requirements.txt and requirements-dev.txt declare direct dependencies.
+When updating dependencies, update those declarations and the affected
+lock entries together, then verify installation, dependency consistency,
+tests and the runtime image on Windows and Linux.
+
+These files pin package versions without artifact hashes.
+The Docker base image is still referenced by a mutable tag.
 
 ## CI
 
