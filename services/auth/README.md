@@ -111,3 +111,37 @@ For Docker Desktop, supply DATABASE_URL through an ignored .env.docker file.
 Use host.docker.internal:5433 to reach the host-published PostgreSQL port;
 127.0.0.1 inside the Auth container refers to that container itself.
 Never commit this file or its credentials.
+
+
+## Registration
+
+POST /api/v1/auth/register
+
+Request:
+{"email":"worker@example.com","password":"a-long-example-password"}
+
+Response: HTTP 201
+{"id":"<account UUID>","status":"PENDING_VERIFICATION"}
+
+Input accepts only email and password. Email must be ASCII, valid and
+at most 254 characters after trimming. Login lookup uses lowercase email.
+Passwords must be 15?128 characters and are preserved exactly as entered.
+These input policies and the response contract are proposed for frontend integration.
+
+Passwords use Argon2id with memoryCost 19456 KiB, timeCost 2 and parallelism 1.
+Responses exclude passwords and hashes. Registration issues no session,
+assigns no role and does not activate the account.
+
+Errors:
+- 400: invalid input or unexpected fields.
+- 409 ACCOUNT_ALREADY_EXISTS: normalized email already exists.
+- 503 REGISTRATION_UNAVAILABLE: database operation failed.
+
+Uniqueness is enforced by PostgreSQL, including concurrent requests.
+The duplicate-email response reveals account existence; this is an explicit
+MVP behavior to review before public exposure.
+Rate limiting and email verification remain follow-up work.
+
+Verification included real PostgreSQL registration, duplicate rejection,
+stored-hash verification and test-account cleanup. Argon2id hashing and
+verification also passed in the Linux production image.
