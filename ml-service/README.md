@@ -1,0 +1,134 @@
+# GigZLK ML Service
+
+## Current scope
+
+Independent FastAPI service foundation:
+- Liveness and readiness endpoints
+- Validated environment configuration
+- Optional interactive API documentation
+- Automated health/configuration tests
+- Non-root Docker image
+- Optional Compose profile
+- GitHub Actions test/build workflow
+
+Matching, recommendations and trained models are not implemented yet.
+There are no database, Redis or Kafka connections in this foundation.
+Readiness currently indicates application startup only.
+
+## Local Python setup
+
+Run from the repository root. Python 3.13 is the tested runtime.
+
+```powershell
+py -3.13 -m venv ml-service/.venv
+.\ml-service\.venv\Scripts\python.exe -m pip install -r ml-service/requirements-dev.txt
+```
+
+Start the API:
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe -m uvicorn app.main:create_app --factory --app-dir ml-service --host 127.0.0.1 --port 8000
+```
+
+Endpoints:
+- http://127.0.0.1:8000/health/live
+- http://127.0.0.1:8000/health/ready
+- http://127.0.0.1:8000/docs
+
+Press Ctrl+C to stop the local server.
+
+## Configuration
+
+| Variable | Default | Allowed values |
+|---|---|---|
+| ML_ENVIRONMENT | development | development, test, staging, production |
+| ML_DOCS_ENABLED | true | Boolean values such as true or false |
+
+Settings read process environment variables.
+.env.example is a template; .env files are not loaded automatically.
+
+Example, before starting the local server:
+
+```powershell
+$env:ML_ENVIRONMENT = 'development'
+$env:ML_DOCS_ENABLED = 'false'
+```
+
+Invalid settings prevent application creation.
+Disabling docs removes /docs and /openapi.json.
+It does not provide authentication.
+The environment label does not automatically change other settings.
+
+## Tests
+
+```powershell
+Push-Location ml-service
+try {
+    .\.venv\Scripts\python.exe -m pytest tests -q
+} finally {
+    Pop-Location
+}
+```
+
+Tests cover startup/shutdown readiness, liveness independence,
+configuration validation and documentation route controls.
+
+## Docker Compose
+
+First complete infrastructure setup in:
+../docs/deployment/local-development.md
+
+From the repository root:
+
+```powershell
+docker compose --env-file infrastructure/docker/.env -f infrastructure/docker/compose.yaml --profile ml up -d --build --wait ml-service
+```
+
+Containerized API:
+- http://127.0.0.1:8001/health/live
+- http://127.0.0.1:8001/health/ready
+- http://127.0.0.1:8001/docs
+
+The container listens internally on port 8000.
+The published Windows port is 8001, bound to loopback.
+The ML service has no declared infrastructure dependencies yet.
+
+Compose currently sets ML_ENVIRONMENT and ML_DOCS_ENABLED explicitly.
+Changing host environment variables alone does not override those values.
+
+Stop only the ML container:
+
+```powershell
+docker compose --env-file infrastructure/docker/.env -f infrastructure/docker/compose.yaml stop ml-service
+```
+
+## Container behavior
+
+- Python 3.13 slim base image
+- Runtime dependencies only; no pytest or test HTTP client installed
+- Runs as UID/GID 10001
+- Readiness-based Docker health check
+- No credentials or local virtual environment copied into the image
+
+Direct requirements are version-pinned.
+Transitive dependencies and the base image are not fully locked.
+
+## CI
+
+.github/workflows/ml-service.yml runs on relevant pull requests
+and pushes to main. It installs dependencies, checks consistency,
+runs tests and builds the image on Linux.
+
+The workflow does not publish images or deploy.
+Security scanning, application metrics and structured request logging
+are not implemented in this foundation.
+
+## Integration boundaries
+
+Domain services retain their business data and authorization.
+Future ML integrations use agreed APIs/events, not private tables.
+Financial decisions remain owned by Payment Service.
+
+Only health and documentation routes exist.
+Authentication and gateway integration must precede exposure of
+future sensitive ML endpoints outside local development.

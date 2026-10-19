@@ -93,6 +93,17 @@ services:
       retries: 10
       start_period: 30s
 
+  ml-service:
+    profiles: ["ml"]
+    build:
+      context: ../../ml-service
+    image: gigzlk-ml:dev
+    environment:
+      ML_ENVIRONMENT: development
+      ML_DOCS_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8001:8000"
+
 volumes:
   postgres_data:
   kafka_data:
