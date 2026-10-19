@@ -14,8 +14,9 @@ The account schema stores email, a unique normalized email lookup,
 password hash, account status, verification time and record timestamps.
 Accounts default to PENDING_VERIFICATION.
 
-Registration, login, email verification, sessions, JWT/JWKS, MFA and
-service-token issuance are not implemented.
+Registration and email-token verification are implemented.
+Login, sessions, JWT/JWKS, MFA, service-token issuance and verification
+email delivery are not implemented.
 
 ## Configuration
 
@@ -66,8 +67,9 @@ GET /health/ready
 
 Response: {"status":"UP","service":"auth"}
 
-Readiness currently covers the HTTP foundation only.
-It does not verify database connectivity or migration state.
+Liveness does not access PostgreSQL. Readiness queries the Account table
+and returns a safe HTTP 503 when that query fails. It checks database access
+and Account table availability, but does not validate the full migration state.
 Health routes remain outside the proposed /api/v1 business API prefix.
 
 ## Verification
@@ -125,7 +127,7 @@ Response: HTTP 201
 
 Input accepts only email and password. Email must be ASCII, valid and
 at most 254 characters after trimming. Login lookup uses lowercase email.
-Passwords must be 15?128 characters and are preserved exactly as entered.
+Passwords must be 15 to 128 characters and are preserved exactly as entered.
 These input policies and the response contract are proposed for frontend integration.
 
 Passwords use Argon2id with memoryCost 19456 KiB, timeCost 2 and parallelism 1.
@@ -140,8 +142,37 @@ Errors:
 Uniqueness is enforced by PostgreSQL, including concurrent requests.
 The duplicate-email response reveals account existence; this is an explicit
 MVP behavior to review before public exposure.
-Rate limiting and email verification remain follow-up work.
+Rate limiting, verification-token issuance and email delivery remain follow-up work.
 
 Verification included real PostgreSQL registration, duplicate rejection,
 stored-hash verification and test-account cleanup. Argon2id hashing and
 verification also passed in the Linux production image.
+
+## Email verification foundation
+
+POST /api/v1/auth/verify-email
+
+Request:
+{"token":"<64 lowercase hexadecimal characters>"}
+
+Success: HTTP 200
+{"status":"VERIFIED"}
+
+Verification atomically activates a pending account and consumes its token.
+Expired, consumed, unknown or email-mismatched tokens cannot activate an
+account. Disabled accounts cannot be activated through this endpoint.
+Concurrent reuse permits exactly one successful verification.
+
+The token helper generates 32 random bytes with a proposed 30-minute
+lifetime. Only the SHA-256 token hash is stored in the database.
+
+Token issuance, resend, email delivery and rate limiting are not implemented.
+Registration continues to create pending accounts without issuing tokens.
+Notification integration remains open for agreement with Member 3.
+Verification does not create a login session.
+
+Verification evidence:
+- Automated token-helper and HTTP validation/response tests.
+- Manual local PostgreSQL checks for activation, replay rejection,
+  expiry rollback, disabled accounts, email mismatch and concurrent reuse.
+- Temporary integration-test accounts and tokens were removed.
