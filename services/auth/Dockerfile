@@ -1,12 +1,14 @@
-﻿FROM node:24-bookworm-slim AS build
+FROM node:24-bookworm-slim AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY nest-cli.json tsconfig.json tsconfig.build.json ./
+COPY nest-cli.json tsconfig.json tsconfig.build.json prisma.config.ts ./
+COPY prisma ./prisma
 COPY src ./src
-RUN npm run build
+
+RUN DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build npm run build
 
 FROM node:24-bookworm-slim AS runtime
 ENV NODE_ENV=production
