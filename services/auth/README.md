@@ -176,3 +176,26 @@ Verification evidence:
 - Manual local PostgreSQL checks for activation, replay rejection,
   expiry rollback, disabled accounts, email mismatch and concurrent reuse.
 - Temporary integration-test accounts and tokens were removed.
+
+## Credential validation foundation
+
+CredentialsService validates email/password credentials internally.
+It normalizes email using trim and lowercase, preserves the exact password,
+and verifies the stored Argon2id hash.
+
+Only ACTIVE accounts with a non-null emailVerifiedAt can succeed.
+Success returns only accountId; no session or token is issued.
+
+Unknown accounts, incorrect passwords and inactive accounts receive the
+same INVALID_CREDENTIALS response. Unknown accounts still perform an
+Argon2id verification using a dummy hash initialized at application startup.
+This reduces timing differences; it does not guarantee identical timing.
+
+Database or hash-verification failures return a safe
+CREDENTIAL_VERIFICATION_UNAVAILABLE response.
+
+No login HTTP endpoint is exposed. Browser authentication, session/token
+issuance and login rate limiting remain pending.
+
+Validation includes real Argon2 hashing with mocked database lookups,
+DTO validation and existing HTTP regression tests.
