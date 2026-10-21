@@ -216,3 +216,11 @@ under that path. Registration and verification HTTP tests assert the header.
 
 The Next.js BFF must independently enforce no-store.
 BFF behavior and live integration remain unverified.
+
+## Shared Compose development
+
+See [Local Auth with Docker Compose](../../docs/deployment/auth-compose.md)
+for private networking, local database-secret generation, controlled
+migrations and container health checks.
+
+This setup does not enable gateway or BFF authentication integration.

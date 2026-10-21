@@ -1,4 +1,9 @@
 FROM node:24-bookworm-slim AS build
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -11,8 +16,10 @@ COPY src ./src
 RUN DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build npm run build
 
 FROM node:24-bookworm-slim AS runtime
+
 ENV NODE_ENV=production
 ENV PORT=3006
+
 WORKDIR /app
 
 COPY package.json package-lock.json ./
