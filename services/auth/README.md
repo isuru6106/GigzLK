@@ -207,3 +207,12 @@ session, CSRF, refresh and MFA behavior.
 
 This is a review draft. Session APIs and live frontend integration are
 not implemented; unresolved decisions are marked OPEN.
+
+## Authentication response caching
+
+Shared HTTP setup applies Cache-Control: no-store to /api/v1/auth
+responses, including validation errors, service failures and unmatched routes
+under that path. Registration and verification HTTP tests assert the header.
+
+The Next.js BFF must independently enforce no-store.
+BFF behavior and live integration remain unverified.

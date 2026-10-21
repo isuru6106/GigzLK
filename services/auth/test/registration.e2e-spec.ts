@@ -1,3 +1,4 @@
+import { configureHttp } from '../src/configure-http';
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -30,6 +31,7 @@ describe('Registration (e2e)', () => {
       .compile();
 
     app = module.createNestApplication();
+    configureHttp(app);
     await app.init();
   });
 
@@ -42,6 +44,7 @@ describe('Registration (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/auth/register')
       .send(valid)
+      .expect('Cache-Control', 'no-store')
       .expect(201)
       .expect(account);
 
@@ -61,6 +64,7 @@ describe('Registration (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/register')
       .send(input)
+      .expect('Cache-Control', 'no-store')
       .expect(400);
 
     expect(create).not.toHaveBeenCalled();
@@ -77,6 +81,7 @@ describe('Registration (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/register')
       .send(valid)
+      .expect('Cache-Control', 'no-store')
       .expect(409)
       .expect({
         code: 'ACCOUNT_ALREADY_EXISTS',
@@ -90,6 +95,7 @@ describe('Registration (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/register')
       .send(valid)
+      .expect('Cache-Control', 'no-store')
       .expect(503)
       .expect({
         code: 'REGISTRATION_UNAVAILABLE',
