@@ -1,3 +1,4 @@
+import { configureHttp } from '../src/configure-http';
 import {
   BadRequestException,
   INestApplication,
@@ -26,6 +27,7 @@ describe('Email verification (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    configureHttp(app);
     await app.init();
   });
 
@@ -42,6 +44,7 @@ describe('Email verification (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/verify-email')
       .send({ token })
+      .expect('Cache-Control', 'no-store')
       .expect(200)
       .expect({ status: 'VERIFIED' });
 
@@ -64,6 +67,7 @@ describe('Email verification (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/verify-email')
       .send(body)
+      .expect('Cache-Control', 'no-store')
       .expect(400);
 
     expect(verify).not.toHaveBeenCalled();
@@ -80,6 +84,7 @@ describe('Email verification (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/verify-email')
       .send({ token })
+      .expect('Cache-Control', 'no-store')
       .expect(400)
       .expect({
         code: 'INVALID_VERIFICATION_TOKEN',
@@ -98,6 +103,7 @@ describe('Email verification (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/verify-email')
       .send({ token })
+      .expect('Cache-Control', 'no-store')
       .expect(503)
       .expect({
         code: 'EMAIL_VERIFICATION_UNAVAILABLE',
@@ -108,6 +114,7 @@ describe('Email verification (e2e)', () => {
   it('does not accept verification through GET', async () => {
     await request(app.getHttpServer())
       .get('/api/v1/auth/verify-email')
+      .expect('Cache-Control', 'no-store')
       .expect(404);
 
     expect(verify).not.toHaveBeenCalled();

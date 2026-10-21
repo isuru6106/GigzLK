@@ -17,7 +17,8 @@ Not implemented:
 - Browser BFF integration, login, sessions, access/refresh issuance,
   rotation, logout, session checks, MFA and CSRF bootstrap.
 - Verification issuance, resend and email delivery.
-- Cache-Control: no-store enforcement across Auth and BFF.
+- BFF Cache-Control: no-store enforcement; Auth now applies it to
+  /api/v1/auth responses through shared HTTP setup.
 
 Acceptance of this draft does not establish verified integration.
 
