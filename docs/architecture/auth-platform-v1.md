@@ -354,8 +354,8 @@ Member 1's review and the platform verification gates remain pending.
 
 ## Assertion boundary rules
 
-Status: Accepted by Member 2 for the draft contract.
-Member 1 signer compatibility review and implementation testing remain required.
+Status: Accepted for the draft contract by Members 1 and 2.
+Implementation and deployment verification remain pending.
 
 ### Size and encoding
 
@@ -437,6 +437,14 @@ For the six listed internal credential operations:
   backslashes, semicolon parameters and unexpected characters.
 - Reject query strings, including an empty trailing question mark.
 - Reject aliases without normalization or redirects.
+
+
+BFF HTTP clients must disable redirect following for credential-bearing
+internal requests. Treat every 3xx response as an unexpected upstream
+response; do not resend credentials to the redirect destination.
+
+The five-second validator leeway does not extend the signer's maximum
+60-second assertion lifetime.
 
 Gateway validates the original request target before routing and forwards
 accepted paths unchanged. Auth independently checks the original request URL
