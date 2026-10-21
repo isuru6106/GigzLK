@@ -225,3 +225,10 @@ Before live integration:
 
 Notification coordination remains separate. Issuance/outbox, resend,
 transparent refresh and live frontend integration remain disconnected.
+
+## Server-only companion draft
+
+See [Internal Auth session API](internal-auth-sessions-v1.md) for proposed
+BFF-to-Auth operations and credential envelopes. These endpoints are not
+implemented. Routing, service authentication, refresh concurrency and MFA
+recovery remain subject to review.
