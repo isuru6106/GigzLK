@@ -199,3 +199,11 @@ issuance and login rate limiting remain pending.
 
 Validation includes real Argon2 hashing with mocked database lookups,
 DTO validation and existing HTTP regression tests.
+
+## Browser authentication draft
+
+See [Browser authentication contract](../../docs/api/browser-auth-v1.md) for the proposed BFF,
+session, CSRF, refresh and MFA behavior.
+
+This is a review draft. Session APIs and live frontend integration are
+not implemented; unresolved decisions are marked OPEN.
