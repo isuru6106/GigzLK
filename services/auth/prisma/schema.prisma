@@ -40,3 +40,13 @@ model EmailVerificationToken {
   @@index([accountId])
   @@index([expiresAt])
 }
+
+model ServiceAssertionReplay {
+  issuer     String   @db.VarChar(255)
+  jti        String   @db.VarChar(32)
+  expiresAt  DateTime @db.Timestamptz(3)
+  consumedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@id([issuer, jti])
+  @@index([expiresAt])
+}

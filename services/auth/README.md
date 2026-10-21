@@ -224,3 +224,27 @@ for private networking, local database-secret generation, controlled
 migrations and container health checks.
 
 This setup does not enable gateway or BFF authentication integration.
+## Service assertion replay storage
+
+Implemented foundation:
+- PostgreSQL replay records unique on (issuer, jti).
+- AssertionReplayService stores issuer, jti and assertion expiry.
+- Duplicate consumption returns 401 SERVICE_AUTH_INVALID.
+- Database failures return 503 AUTH_UNAVAILABLE.
+- Raw assertions and user credentials are not stored.
+
+Verification:
+- Unit tests cover storage and safe error mapping.
+- A local PostgreSQL check using two independent clients confirmed
+  exactly one successful consumption for concurrent duplicate attempts.
+
+To repeat the PostgreSQL check from services/auth:
+
+    npm.cmd run build
+    node --env-file=.env scripts/check-assertion-replay.cjs
+
+The script removes its temporary test record.
+
+JWT validation, operation authorization, final admission timing,
+replay cleanup and HTTP integration are not implemented by this foundation.
+Live integration remains disconnected.
