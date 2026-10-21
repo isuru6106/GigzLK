@@ -309,6 +309,7 @@ Required tests include:
 - No-store on success and error responses.
 
 Live integration remains disconnected until review and relevant tests pass.
+
 ## 13. Member 2 review clarifications
 
 Status: PROPOSED - pending review by Members 1 and 4.
@@ -349,3 +350,115 @@ to interpret the same request as different operations.
 
 These clarifications do not implement or approve live integration.
 Member 1's review and the platform verification gates remain pending.
+
+
+## Assertion boundary rules
+
+Status: Accepted by Member 2 for the draft contract.
+Member 1 signer compatibility review and implementation testing remain required.
+
+### Size and encoding
+
+- Compact JWT maximum: 4096 ASCII bytes, excluding the Bearer prefix.
+- Decoded protected-header maximum: 512 bytes.
+- Decoded payload maximum: 2048 bytes.
+- Exactly three non-empty, unpadded base64url segments.
+- Header and payload must be valid UTF-8 JSON objects.
+- Reject duplicate JSON member names, malformed encoding and unsupported headers.
+- Check encoded size before decoding and decoded sizes before JSON parsing.
+- Auth enforces all assertion limits.
+- Gateway enforces the encoded limit without trusting decoded claims.
+
+### Identifiers
+
+kid:
+- 1 to 64 ASCII characters.
+- Pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$
+- Resolve only within the configured issuer-specific key set.
+
+jti:
+- Exactly 32 lowercase hexadecimal characters.
+- Pattern: ^[0-9a-f]{32}$
+- Generate from 16 cryptographically random bytes.
+- Replay uniqueness is (issuer, jti) across all Auth replicas.
+
+### Timing and operation admission
+
+- Maximum assertion lifetime: 60 seconds.
+- Maximum validation leeway: five seconds.
+- Require integer NumericDate claims.
+- Retain the issued-at and expiry validation rules in the assertion profile.
+- Assume at most five seconds of clock difference between participating
+  BFF hosts, Auth hosts and PostgreSQL.
+
+After replay insertion commits, perform a final timing check immediately
+before invoking the protected operation.
+
+Use the same acceptance rules and five-second leeway for this final check.
+Once the acceptance window closes, return 401 SERVICE_AUTH_INVALID
+without invoking the protected operation.
+
+If replay consumption already committed, retain the replay record even
+when the final check fails. A permitted later attempt needs a fresh assertion.
+
+The assertion deadline governs operation admission.
+An operation admitted within the acceptance window may finish afterward.
+
+Replay records become eligible for cleanup strictly after exp + 30 seconds,
+using PostgreSQL time. Cleanup delay never extends assertion validity.
+
+### Clock reliability
+
+Automatic clock-fault detection and recovery are not currently implemented
+or verified. The five-second bound is a deployment prerequisite, not a
+guarantee established by JWT validation.
+
+Before integration, Member 4 must document and test an operational procedure:
+- Check time-synchronization status and measured offset/uncertainty on
+  participating hosts against an approved time source.
+- If clock reliability is unknown or the bound is exceeded, disable protected
+  operation admission and pause replay cleanup.
+- Return 503 AUTH_UNAVAILABLE for the operational failure.
+- Restore admission only after synchronization is verified across hosts and
+  any unsafe replay-cleanup interval is assessed.
+- Ensure previously consumed assertions cannot become reusable after a clock
+  correction; require key replacement or another reviewed recovery barrier
+  when that cannot be established.
+
+Readiness and admission controls must enforce this procedure when implemented.
+Do not claim automatic monitoring or restoration until tested.
+
+### Exact method and path
+
+For the six listed internal credential operations:
+- Require uppercase POST.
+- Match the complete configured path exactly and case-sensitively.
+- Reject trailing slashes, percent encoding, duplicate slashes, dot segments,
+  backslashes, semicolon parameters and unexpected characters.
+- Reject query strings, including an empty trailing question mark.
+- Reject aliases without normalization or redirects.
+
+Gateway validates the original request target before routing and forwards
+accepted paths unchanged. Auth independently checks the original request URL
+before framework routing.
+
+Unlisted paths and methods never invoke credential handlers.
+These rules apply to the credential operations, not separately defined
+health or JWKS routes.
+
+### Failure behavior and shared tests
+
+- Invalid assertions and replay: 401 SERVICE_AUTH_INVALID at Auth.
+- Oversized HTTP headers may be rejected earlier with 431.
+- Path/method violations: safe 4xx, without redirects or operation execution.
+- Key, replay-store or known clock-reliability failures: operational failure,
+  never wrong user credentials.
+- BFFs safely handle gateway errors without an Auth JSON envelope.
+- Every permitted outbound retry requires a fresh assertion.
+- Business retry permission remains governed by its idempotency contract.
+
+Gateway and Auth must share boundary and malformed-request test vectors.
+Include final-check expiry, retained replay consumption, concurrent replicas,
+cleanup timing and operations completing after valid admission.
+
+Live integration remains disconnected pending implementation review and testing.
