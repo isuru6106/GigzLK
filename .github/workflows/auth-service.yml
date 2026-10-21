@@ -1,0 +1,62 @@
+name: Auth service CI
+
+on:
+  pull_request:
+    paths:
+      - "services/auth/**"
+      - ".github/workflows/auth-service.yml"
+  push:
+    branches: [main]
+    paths:
+      - "services/auth/**"
+      - ".github/workflows/auth-service.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: services/auth
+
+    env:
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/gigzlk_auth_ci
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: services/auth/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Prisma schema
+        run: npx --no-install prisma validate
+
+      - name: Build application and generate Prisma Client
+        run: npm run build
+
+      - name: Check source and test lint
+        run: npx --no-install eslint "src/**/*.ts" "test/**/*.ts" --ignore-pattern "src/generated/**"
+
+      - name: Run unit tests
+        run: npm test -- --runInBand
+
+      - name: Run HTTP tests with mocked dependencies
+        run: npm run test:e2e -- --runInBand
+
+      - name: Build runtime image
+        run: docker build -t gigzlk-auth:ci .
