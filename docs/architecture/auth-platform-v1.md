@@ -309,3 +309,43 @@ Required tests include:
 - No-store on success and error responses.
 
 Live integration remains disconnected until review and relevant tests pass.
+## 13. Member 2 review clarifications
+
+Status: PROPOSED - pending review by Members 1 and 4.
+
+### Replay timing
+
+Validation and replay cleanup must use consistent time rules across replicas.
+Define a maximum supported clock difference and a cleanup safety margin.
+
+Replay records must remain until after the assertion's final possible
+acceptance time, including allowed clock skew and the cleanup margin.
+Cleanup must never make a still-acceptable assertion reusable.
+
+Test replay rejection across replicas near expiry and cleanup boundaries.
+
+### Bounded assertion input
+
+Before implementation, agree on:
+- Maximum encoded assertion size.
+- Maximum decoded header and payload size.
+- Bounded kid and jti lengths and permitted characters.
+- Exact configured issuer/subject values.
+- Rejection of unexpected claim types and duplicate JSON member names.
+
+A valid jti must retain at least 128 bits of cryptographic randomness.
+These limits must be checked before replay-store insertion.
+
+### Exact operation matching
+
+Gateway and Auth must agree on exact permitted HTTP methods and paths.
+Define consistent handling of trailing slashes, percent encoding, duplicate
+slashes, dot segments and query strings.
+
+Reject ambiguous representations rather than allowing gateway and Auth
+to interpret the same request as different operations.
+
+### Review status
+
+These clarifications do not implement or approve live integration.
+Member 1's review and the platform verification gates remain pending.
