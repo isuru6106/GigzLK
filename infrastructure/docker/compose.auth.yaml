@@ -1,0 +1,71 @@
+services:
+  postgres:
+    networks:
+      - default
+      - auth_private
+
+  auth:
+    profiles: ["auth"]
+    build:
+      context: ../../services/auth
+      target: runtime
+    image: gigzlk-auth:dev
+    environment:
+      PORT: "3006"
+    secrets:
+      - auth_database_url
+    command:
+      - sh
+      - -ec
+      - |
+        export DATABASE_URL="$$(cat /run/secrets/auth_database_url)"
+        exec node dist/main.js
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - auth_private
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://127.0.0.1:3006/health/ready',
+          {signal: AbortSignal.timeout(3000)})
+          .then(response => {if (!response.ok) process.exit(1);})
+          .catch(() => process.exit(1));
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  auth-migrate:
+    profiles: ["auth-tools"]
+    build:
+      context: ../../services/auth
+      target: build
+    image: gigzlk-auth-migrate:dev
+    user: node
+    secrets:
+      - auth_database_url
+    command:
+      - sh
+      - -ec
+      - |
+        export DATABASE_URL="$$(cat /run/secrets/auth_database_url)"
+        exec ./node_modules/.bin/prisma migrate deploy
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - auth_private
+    restart: "no"
+
+secrets:
+  auth_database_url:
+    file: ./.env.auth-database-url
+
+networks:
+  auth_private:
+    internal: true
