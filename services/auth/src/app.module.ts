@@ -1,3 +1,4 @@
+import { AssertionKeysService } from './service-auth/assertion-keys.service';
 import { CredentialsService } from './credentials/credentials.service';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
@@ -18,6 +19,7 @@ import { RegistrationService } from './registration/registration.service';
     DatabaseService,
     RegistrationService,
     EmailVerificationService,
+    AssertionKeysService,
   ],
 })
 export class AppModule {}
