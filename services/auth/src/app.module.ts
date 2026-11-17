@@ -7,6 +7,8 @@ import { EmailVerificationController } from './email-verification/email-verifica
 import { EmailVerificationService } from './email-verification/email-verification.service';
 import { RegistrationController } from './registration/registration.controller';
 import { RegistrationService } from './registration/registration.service';
+import { AssertionAdmissionService } from './service-auth/assertion-admission.service';
+import { AssertionReplayService } from './service-auth/assertion-replay.service';
 
 @Module({
   controllers: [
@@ -19,6 +21,8 @@ import { RegistrationService } from './registration/registration.service';
     DatabaseService,
     RegistrationService,
     EmailVerificationService,
+    AssertionAdmissionService,
+    AssertionReplayService,
     AssertionKeysService,
   ],
 })
