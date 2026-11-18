@@ -1,0 +1,71 @@
+name: Gateway boundary CI
+
+on:
+  pull_request:
+    paths:
+      - "infrastructure/gateway/**"
+      - ".github/workflows/gateway.yml"
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/gateway/**"
+      - ".github/workflows/gateway.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gateway-boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check infrastructure/gateway/generate-dev-certs.cjs
+          node --check infrastructure/gateway/mock-auth.cjs
+          node --check infrastructure/gateway/gateway.test.cjs
+
+      - name: Generate temporary development certificates
+        run: |
+          openssl version
+          mkdir -p infrastructure/gateway/.local
+          node infrastructure/gateway/generate-dev-certs.cjs \
+            "$GITHUB_WORKSPACE/infrastructure/gateway/.local"
+
+      - name: Validate Compose configuration
+        run: docker compose -f infrastructure/gateway/compose.test.yaml config --quiet
+
+      - name: Start isolated gateway and mock
+        run: docker compose -f infrastructure/gateway/compose.test.yaml up -d --wait
+
+      - name: Check NGINX configuration
+        run: docker compose -f infrastructure/gateway/compose.test.yaml exec -T gateway nginx -t
+
+      - name: Test routing and TLS boundaries
+        run: |
+          docker run --rm \
+            --network gigzlk-gateway-test_backend \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/infrastructure/gateway/gateway.test.cjs,target=/tests/gateway.test.cjs,readonly" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/infrastructure/gateway/.local/ca.crt,target=/certs/ca.crt,readonly" \
+            node:24-bookworm-slim \
+            node --test /tests/gateway.test.cjs
+
+      - name: Show test-container logs on failure
+        if: failure()
+        run: docker compose -f infrastructure/gateway/compose.test.yaml logs --no-color --tail 50
+
+      - name: Stop isolated test environment
+        if: always()
+        run: docker compose -f infrastructure/gateway/compose.test.yaml down --remove-orphans

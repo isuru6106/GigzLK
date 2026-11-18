@@ -47,3 +47,5 @@ docker-compose.override.yml
 *.key
 *.crt
 /infrastructure/docker/.env.auth-database-url
+
+/infrastructure/gateway/.local/

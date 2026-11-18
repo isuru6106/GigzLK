@@ -1,0 +1,53 @@
+name: gigzlk-gateway-test
+
+services:
+  mock:
+    image: node:24-bookworm-slim
+    user: node
+    command: ["node", "/scripts/mock-auth.cjs"]
+    volumes:
+      - type: bind
+        source: ./mock-auth.cjs
+        target: /scripts/mock-auth.cjs
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      - backend
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  gateway:
+    image: nginx:stable-bookworm
+    depends_on:
+      - mock
+    ports:
+      - "127.0.0.1:18080:8080"
+      - "127.0.0.1:18443:8443"
+    volumes:
+      - type: bind
+        source: ./nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind:
+          create_host_path: false
+    secrets:
+      - gateway_certificate
+      - gateway_private_key
+    networks:
+      - edge
+      - backend
+
+secrets:
+  gateway_certificate:
+    file: ./.local/gateway.crt
+  gateway_private_key:
+    file: ./.local/gateway.key
+
+networks:
+  edge:
+  backend:
+    internal: true
