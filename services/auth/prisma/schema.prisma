@@ -14,8 +14,11 @@ enum AccountStatus {
   DISABLED
 }
 
+enum SessionAudience {
+  MARKETPLACE
+}
+
 model Account {
-  verificationTokens EmailVerificationToken[]
   id                 String                   @id @default(uuid()) @db.Uuid
   email              String                   @db.VarChar(254)
   emailNormalized    String                   @unique @db.VarChar(254)
@@ -24,6 +27,8 @@ model Account {
   emailVerifiedAt    DateTime?                @db.Timestamptz(3)
   createdAt          DateTime                 @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime                 @updatedAt @db.Timestamptz(3)
+  verificationTokens EmailVerificationToken[]
+  sessions           AuthSession[]
 }
 
 model EmailVerificationToken {
@@ -48,5 +53,19 @@ model ServiceAssertionReplay {
   consumedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([issuer, jti])
+  @@index([expiresAt])
+}
+
+model AuthSession {
+  id        String          @id @default(uuid()) @db.Uuid
+  accountId String          @db.Uuid
+  audience  SessionAudience
+  createdAt DateTime        @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime        @db.Timestamptz(3)
+  revokedAt DateTime?       @db.Timestamptz(3)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, audience])
   @@index([expiresAt])
 }
