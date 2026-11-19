@@ -243,3 +243,45 @@ Before integration, test:
 
 Refresh, logout-all ordering, CSRF and admin MFA retain their separate
 review and implementation gates.
+## Member 1 review clarifications
+
+Member 1 accepts this draft from the frontend/BFF architecture perspective.
+Implementation and integration verification remain pending.
+Member 4's review remains pending.
+
+### JWKS freshness
+
+Measure the 300-second freshness maximum from the last successful,
+validated retrieval. Failed or suppressed refreshes never reset it.
+
+Known keys may remain usable within that bound.
+Unknown keys are never accepted.
+
+If refresh is suppressed by the rate limit and the current key set lacks
+the requested kid, deny the operation with 503 AUTH_UNAVAILABLE.
+This does not establish an invalid user session and must not clear cookies.
+
+A successful authoritative refresh that still lacks the requested kid
+returns 401 SESSION_INVALID.
+
+### BFF verification ownership
+
+GET /api/v1/auth/session calls Auth's current-state endpoint.
+
+Admin and sensitive operations require authoritative current-state
+validation and fail closed when it is unavailable.
+
+Ordinary marketplace requests may use local JWT validation only where
+explicitly documented and reviewed. Local validation checks the full
+token profile; it does not establish current session state or resource
+permissions. Decoded claims alone never establish authentication.
+
+Login and MFA responses use explicit server-only response mapping.
+Logout and future refresh follow their operation-specific Auth contracts.
+Expired access credentials alone must not block those flows.
+
+Local validation remains disconnected pending implementation and route review.
+Access expiry does not imply an implemented refresh capability.
+
+Operational failures preserve otherwise valid session cookies.
+Access issuance, refresh and live integration remain pending.
