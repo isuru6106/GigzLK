@@ -15,8 +15,10 @@ function request({
   method = "POST",
   authorization = syntheticAssertion,
   headers = {},
-  trustCA = true,
+    trustCA = true,
   servername,
+  body,
+  chunked = false,
 } = {}) {
   return new Promise((resolve, reject) => {
     const transport = secure ? https : http;
@@ -24,6 +26,14 @@ function request({
 
     if (authorization !== null) {
       requestHeaders.Authorization = authorization;
+    }
+
+        if (body !== undefined) {
+      if (chunked) {
+        requestHeaders["Transfer-Encoding"] = "chunked";
+      } else {
+        requestHeaders["Content-Length"] = Buffer.byteLength(body);
+      }
     }
 
     const options = {
@@ -57,12 +67,12 @@ function request({
       });
     });
 
-    outgoing.setTimeout(5000, () => {
+        outgoing.setTimeout(10000, () => {
       outgoing.destroy(new Error("Request timed out"));
     });
 
     outgoing.on("error", reject);
-    outgoing.end();
+        outgoing.end(body);
   });
 }
 
@@ -242,5 +252,101 @@ test("Gateway routing and TLS boundaries", async (t) => {
     );
 
     assert.equal(await upstreamCount(), before);
+  });
+});
+
+test("Gateway body forwarding and upstream failures", async (t) => {
+  const { createHash } = require("node:crypto");
+
+  function assertPrivateResponse(response, expectedStatus) {
+    assert.equal(response.status, expectedStatus);
+    assert.equal(response.headers["cache-control"], "no-store");
+    assert.equal(response.headers["set-cookie"], undefined);
+  }
+
+  await t.test("forwards fixed-length and chunked JSON unchanged", async () => {
+    const body = JSON.stringify({
+      label: "Synthetic Unicode: සිංහල",
+      nested: { enabled: true, values: [1, 2, 3] },
+    });
+
+    const digest = createHash("sha256").update(body).digest("hex");
+    const before = await upstreamCount();
+
+    for (const chunked of [false, true]) {
+      const response = await request({
+        body,
+        chunked,
+        headers: { "Content-Type": "application/json" },
+      });
+
+      assertPrivateResponse(response, 200);
+
+      const metadata = JSON.parse(response.body);
+      assert.equal(metadata.status, "MOCK_UPSTREAM_ONLY");
+      assert.equal(metadata.bodyBytes, Buffer.byteLength(body));
+      assert.equal(metadata.bodySha256, digest);
+      assert.equal(metadata.receivedContentType, "application/json");
+    }
+
+    assert.equal(await upstreamCount(), before + 2);
+  });
+
+  await t.test("preserves upstream 503 without retrying", async () => {
+    const before = await upstreamCount();
+
+    const response = await request({
+      body: JSON.stringify({ testScenario: "unavailable" }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    assertPrivateResponse(response, 503);
+    assert.equal(
+      JSON.parse(response.body).status,
+      "MOCK_UPSTREAM_ONLY",
+    );
+    assert.equal(await upstreamCount(), before + 1);
+  });
+
+  await t.test("returns upstream redirect without following it", async () => {
+    const before = await upstreamCount();
+
+    const response = await request({
+      body: JSON.stringify({ testScenario: "redirect" }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    assertPrivateResponse(response, 307);
+    assert.equal(
+      response.headers.location,
+      "http://mock:3006/mock-redirect-target",
+    );
+    assert.equal(await upstreamCount(), before + 1);
+  });
+
+  await t.test("returns 502 after upstream disconnect without retrying", async () => {
+    const before = await upstreamCount();
+
+    const response = await request({
+      body: JSON.stringify({ testScenario: "disconnect" }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    assertPrivateResponse(response, 502);
+    assert.equal(response.headers.location, undefined);
+    assert.equal(await upstreamCount(), before + 1);
+  });
+
+  await t.test("returns 504 after upstream timeout without retrying", async () => {
+    const before = await upstreamCount();
+
+    const response = await request({
+      body: JSON.stringify({ testScenario: "timeout" }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    assertPrivateResponse(response, 504);
+    assert.equal(response.headers.location, undefined);
+    assert.equal(await upstreamCount(), before + 1);
   });
 });
