@@ -164,3 +164,7 @@ This command targets only the `gigzlk-gateway-test` project.
 the isolated checks for relevant pull requests and main-branch pushes.
 
 Live authentication integration remains disconnected.
+
+- Exactly 8192-byte JSON bodies pass with fixed-length and chunked framing.
+- 8193-byte bodies receive HTTP 413 with `Cache-Control: no-store`.
+- Oversized requests do not increment the mock operation counter.

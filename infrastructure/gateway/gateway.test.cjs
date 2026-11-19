@@ -350,3 +350,65 @@ test("Gateway body forwarding and upstream failures", async (t) => {
     assert.equal(await upstreamCount(), before + 1);
   });
 });
+
+test("Gateway request body size boundaries", async (t) => {
+  const { createHash } = require("node:crypto");
+
+  function jsonBodyOfSize(bytes) {
+    const emptyBody = JSON.stringify({ padding: "" });
+    const paddingLength = bytes - Buffer.byteLength(emptyBody);
+
+    assert.ok(paddingLength >= 0);
+
+    const body = JSON.stringify({
+      padding: "x".repeat(paddingLength),
+    });
+
+    assert.equal(Buffer.byteLength(body), bytes);
+    return body;
+  }
+
+  await t.test("accepts exactly 8192 bytes with either framing", async () => {
+    const body = jsonBodyOfSize(8192);
+    const digest = createHash("sha256").update(body).digest("hex");
+    const before = await upstreamCount();
+
+    for (const chunked of [false, true]) {
+      const response = await request({
+        body,
+        chunked,
+        headers: { "Content-Type": "application/json" },
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(response.headers["cache-control"], "no-store");
+      assert.equal(response.headers["set-cookie"], undefined);
+
+      const metadata = JSON.parse(response.body);
+      assert.equal(metadata.bodyBytes, 8192);
+      assert.equal(metadata.bodySha256, digest);
+    }
+
+    assert.equal(await upstreamCount(), before + 2);
+  });
+
+  await t.test("rejects 8193 bytes before forwarding with either framing", async () => {
+    const body = jsonBodyOfSize(8193);
+    const before = await upstreamCount();
+
+    for (const chunked of [false, true]) {
+      const response = await request({
+        body,
+        chunked,
+        headers: { "Content-Type": "application/json" },
+      });
+
+      assert.equal(response.status, 413);
+      assert.equal(response.headers["cache-control"], "no-store");
+      assert.equal(response.headers["set-cookie"], undefined);
+      assert.equal(response.headers.location, undefined);
+
+      assert.equal(await upstreamCount(), before);
+    }
+  });
+});
