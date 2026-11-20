@@ -336,3 +336,28 @@ Do not claim immediate removal while consumers can still trust cached keys.
 
 Member 1's accepted freshness and BFF validation clarifications also apply.
 Access-token issuance, refresh and live integration remain pending.
+
+### Accepted retrieval bounds
+
+Accepted by Member 4 for the draft contract:
+- Maximum response body: 32768 bytes, enforced while reading.
+- Maximum published keys: 8, with unique kid values.
+- Three-second total deadline covering connection, TLS, response reading
+  and validation.
+- Redirect following disabled.
+- Request identity encoding; reject non-identity content encoding.
+
+Invalid retrievals preserve the previous validated key set and its
+original freshness timestamp. It remains usable only within the
+300-second freshness limit. Unknown keys are never accepted.
+
+Required boundary tests:
+- 32768-byte body accepted; 32769-byte body rejected.
+- Eight valid keys accepted; nine keys or duplicate kids rejected.
+- Retrieval and validation must finish before the three-second deadline.
+- Redirects and non-identity content encoding rejected.
+- Failed retrievals do not replace keys or reset freshness.
+- Known keys rejected once freshness reaches 300 seconds.
+- Unknown keys never accepted, including during refresh suppression.
+
+Contract acceptance does not establish implementation or verified integration.
