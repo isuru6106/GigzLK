@@ -243,3 +243,121 @@ Before integration, test:
 
 Refresh, logout-all ordering, CSRF and admin MFA retain their separate
 review and implementation gates.
+
+
+## Member 1 review clarifications
+
+Member 1 accepts this draft from the frontend/BFF architecture perspective.
+Implementation and integration verification remain pending.
+Member 4 supports the design subject to the platform clarifications below.
+Concrete retrieval limits await confirmation.
+
+### JWKS freshness
+
+Measure the 300-second freshness maximum from the last successful,
+validated retrieval. Failed or suppressed refreshes never reset it.
+
+Known keys may remain usable within that bound.
+Unknown keys are never accepted.
+
+If refresh is suppressed by the rate limit and the current key set lacks
+the requested kid, deny the operation with 503 AUTH_UNAVAILABLE.
+This does not establish an invalid user session and must not clear cookies.
+
+A successful authoritative refresh that still lacks the requested kid
+returns 401 SESSION_INVALID.
+
+### BFF verification ownership
+
+GET /api/v1/auth/session calls Auth's current-state endpoint.
+
+Admin and sensitive operations require authoritative current-state
+validation and fail closed when it is unavailable.
+
+Ordinary marketplace requests may use local JWT validation only where
+explicitly documented and reviewed. Local validation checks the full
+token profile; it does not establish current session state or resource
+permissions. Decoded claims alone never establish authentication.
+
+Login and MFA responses use explicit server-only response mapping.
+Logout and future refresh follow their operation-specific Auth contracts.
+Expired access credentials alone must not block those flows.
+
+Local validation remains disconnected pending implementation and route review.
+Access expiry does not imply an implemented refresh capability.
+
+Operational failures preserve otherwise valid session cookies.
+Access issuance, refresh and live integration remain pending.
+
+## Member 4 platform review clarifications
+
+Member 4 supports the design subject to recording these details.
+Deployment verification and live integration remain pending.
+
+### Signing-key provisioning
+
+Inject Auth private signing keys at runtime through read-only secret mounts.
+Exclude them from Git, image layers and build arguments.
+
+Configure the active signing kid explicitly.
+Validate that its public key matches the private signing key before enabling
+issuance. Invalid required configuration prevents issuance readiness.
+
+### Discovery routing and transport
+
+Expose only the exact GET /.well-known/jwks.json discovery route.
+This exception must not expose internal Auth operations.
+
+Consumers use a configured discovery URL, validate TLS certificates and
+hostnames, and disable redirect following.
+
+### Proposed retrieval bounds
+
+The following concrete limits await Member 4's confirmation:
+- Maximum response body: 32768 bytes, enforced while reading.
+- Maximum keys: 8.
+- Total retrieval deadline: 3 seconds, including connection and body reading.
+- Redirect following: disabled.
+
+Enforce the body limit regardless of Content-Length.
+Request identity encoding and reject unexpected content encoding.
+
+Oversized, timed-out, malformed or otherwise invalid responses must not
+replace the last validated key set or reset its freshness timestamp.
+
+### Coordinated rotation and emergency removal
+
+Coordinate publication and signing changes across every Auth replica.
+Measure old-key retention from its last issuance on any replica.
+
+Document emergency key removal separately, including consumer cache
+invalidation or disabling affected operations where necessary.
+Do not claim immediate removal while consumers can still trust cached keys.
+
+Member 1's accepted freshness and BFF validation clarifications also apply.
+Access-token issuance, refresh and live integration remain pending.
+
+### Accepted retrieval bounds
+
+Accepted by Member 4 for the draft contract:
+- Maximum response body: 32768 bytes, enforced while reading.
+- Maximum published keys: 8, with unique kid values.
+- Three-second total deadline covering connection, TLS, response reading
+  and validation.
+- Redirect following disabled.
+- Request identity encoding; reject non-identity content encoding.
+
+Invalid retrievals preserve the previous validated key set and its
+original freshness timestamp. It remains usable only within the
+300-second freshness limit. Unknown keys are never accepted.
+
+Required boundary tests:
+- 32768-byte body accepted; 32769-byte body rejected.
+- Eight valid keys accepted; nine keys or duplicate kids rejected.
+- Retrieval and validation must finish before the three-second deadline.
+- Redirects and non-identity content encoding rejected.
+- Failed retrievals do not replace keys or reset freshness.
+- Known keys rejected once freshness reaches 300 seconds.
+- Unknown keys never accepted, including during refresh suppression.
+
+Contract acceptance does not establish implementation or verified integration.
