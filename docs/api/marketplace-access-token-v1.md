@@ -243,11 +243,14 @@ Before integration, test:
 
 Refresh, logout-all ordering, CSRF and admin MFA retain their separate
 review and implementation gates.
+
+
 ## Member 1 review clarifications
 
 Member 1 accepts this draft from the frontend/BFF architecture perspective.
 Implementation and integration verification remain pending.
-Member 4's review remains pending.
+Member 4 supports the design subject to the platform clarifications below.
+Concrete retrieval limits await confirmation.
 
 ### JWKS freshness
 
@@ -285,3 +288,51 @@ Access expiry does not imply an implemented refresh capability.
 
 Operational failures preserve otherwise valid session cookies.
 Access issuance, refresh and live integration remain pending.
+
+## Member 4 platform review clarifications
+
+Member 4 supports the design subject to recording these details.
+Deployment verification and live integration remain pending.
+
+### Signing-key provisioning
+
+Inject Auth private signing keys at runtime through read-only secret mounts.
+Exclude them from Git, image layers and build arguments.
+
+Configure the active signing kid explicitly.
+Validate that its public key matches the private signing key before enabling
+issuance. Invalid required configuration prevents issuance readiness.
+
+### Discovery routing and transport
+
+Expose only the exact GET /.well-known/jwks.json discovery route.
+This exception must not expose internal Auth operations.
+
+Consumers use a configured discovery URL, validate TLS certificates and
+hostnames, and disable redirect following.
+
+### Proposed retrieval bounds
+
+The following concrete limits await Member 4's confirmation:
+- Maximum response body: 32768 bytes, enforced while reading.
+- Maximum keys: 8.
+- Total retrieval deadline: 3 seconds, including connection and body reading.
+- Redirect following: disabled.
+
+Enforce the body limit regardless of Content-Length.
+Request identity encoding and reject unexpected content encoding.
+
+Oversized, timed-out, malformed or otherwise invalid responses must not
+replace the last validated key set or reset its freshness timestamp.
+
+### Coordinated rotation and emergency removal
+
+Coordinate publication and signing changes across every Auth replica.
+Measure old-key retention from its last issuance on any replica.
+
+Document emergency key removal separately, including consumer cache
+invalidation or disabling affected operations where necessary.
+Do not claim immediate removal while consumers can still trust cached keys.
+
+Member 1's accepted freshness and BFF validation clarifications also apply.
+Access-token issuance, refresh and live integration remain pending.
