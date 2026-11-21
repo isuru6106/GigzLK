@@ -558,21 +558,24 @@ and evaluation results justify them.
 
 ## 15. Current Status
 
-ML architecture and responsibilities have been documented.
+The explainable rules-v1 matching baseline is implemented at
+POST /api/v1/ml/match. Its recorded baseline verification passed 67 tests.
 
-Model implementation will begin after the team confirms:
+See [Matching baseline](matching-v1.md) for the implemented contract.
 
-- Backend architecture
+Vector retrieval, recommendations and payment estimation remain pending.
+See [Recommendation proposal](recommendations-v1.md) for the proposed
+source data, ownership, outputs and open integration decisions.
 
-- Database structure
+The listed recommendation, pricing, fraud and sentiment endpoint names
+elsewhere in this document are architecture proposals, not confirmation
+that those routes are implemented.
 
-- Available data
+The [Member 4 checklist](../project-management/member4-checklist.md)
+tracks the wider delivery scope.
 
-- API contracts
-
-- Event contracts
-
-- Authentication approach
+Live recommendation integration requires agreed source contracts,
+authorization, data handling and integration verification.
 
 ## Integration planning reference
 
