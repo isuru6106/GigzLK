@@ -164,3 +164,63 @@ It does not enable login, refresh, or live integration.
 
 Members 1 and 4 must review the remaining retry, refresh, and infrastructure
 details before endpoint integration.
+## Member 1 review clarifications
+
+Member 1 accepts the proposed issuance direction. Unresolved items remain
+implementation blockers; this acceptance does not enable integration.
+
+### Atomic issuance and response handling
+
+Session creation and refresh-hash persistence share one transaction.
+Return the complete credential envelope only after confirmed commit.
+The BFF validates the complete envelope before setting cookies.
+
+### Password-change race
+
+Member 1 prefers credential versioning; Member 2 accepts it as the proposed
+comparison mechanism.
+
+Capture the credential version alongside the password hash during
+verification. Recheck that version under the account lock before issuance.
+Password changes must increment it using compatible locking.
+
+Member 2 owns implementation and concurrency tests.
+Credential versioning is not implemented by this document.
+
+### Uncertain outcomes
+
+Timeouts and lost commit acknowledgements produce no success response
+or new cookies. Preserve existing browser cookies and report an operational
+error without claiming issuance rolled back.
+
+### Login retries and response ordering
+
+Disable automatic login retries at the UI client, BFF, and gateway.
+A fresh service assertion does not make another login attempt safe.
+
+Before enabling login, Members 1 and 2 must agree on bounded operation
+binding, concurrent duplicates, uncertain-attempt recovery, and prevention
+of older responses overwriting newer cookies.
+
+Disabling a submit button does not resolve multi-tab concurrency.
+
+### Retained credential responses
+
+Member 4 must review any proposed response-retention encryption,
+key provisioning, access controls, expiry, and cleanup.
+
+Ordinary logs and general-purpose caches are unsuitable for retaining
+credential responses. No response-retention mechanism is approved here.
+
+### Refresh and frontend verification
+
+The BFF must not advertise or invoke refresh until rotation, lost-response
+recovery, reuse detection, logout coordination, and cookie ordering are
+reviewed and implemented.
+
+Member 1's verification scope includes safe response mapping, unchanged
+cookies on operational failure, no automatic retries, concurrent response
+ordering, and no-store on every outcome.
+
+Member 4's review of this issuance proposal remains pending.
+Login issuance, refresh, and live integration remain disconnected.
