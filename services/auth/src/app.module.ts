@@ -11,6 +11,7 @@ import { AssertionKeysService } from './service-auth/assertion-keys.service';
 import { AssertionReplayService } from './service-auth/assertion-replay.service';
 import { InternalAuthHttpService } from './service-auth/internal-auth-http.service';
 import { MarketplaceSessionService } from './sessions/marketplace-session.service';
+import { AccessSigningKeyService } from './access-tokens/access-signing-key.service';
 
 @Module({
   controllers: [
@@ -19,6 +20,7 @@ import { MarketplaceSessionService } from './sessions/marketplace-session.servic
     EmailVerificationController,
   ],
   providers: [
+    AccessSigningKeyService,
     CredentialsService,
     InternalAuthHttpService,
     DatabaseService,
