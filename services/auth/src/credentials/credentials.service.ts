@@ -28,7 +28,9 @@ export class CredentialsService implements OnModuleInit {
     }
   }
 
-  async validate(input: CredentialsDto): Promise<{ accountId: string }> {
+  async validate(
+    input: CredentialsDto,
+  ): Promise<{ accountId: string; authenticatedAt: Date }> {
     const dummyHash = this.dummyHash;
 
     if (!dummyHash) {
@@ -71,7 +73,10 @@ export class CredentialsService implements OnModuleInit {
       });
     }
 
-    return { accountId: account.id };
+    return {
+      accountId: account.id,
+      authenticatedAt: new Date(),
+    };
   }
 
   private unavailable(): ServiceUnavailableException {
