@@ -17,14 +17,31 @@ type LockedAccount = {
 export class MarketplaceSessionService {
   constructor(private readonly database: DatabaseService) {}
 
-  // Internal operation: accountId must come from validated credentials.
-  // This method must never accept an accountId directly from a browser.
-  async createForAccount(accountId: string): Promise<{
+  // Both arguments must come from successful credential validation.
+  // Never accept them directly from browser input.
+  async createForAccount(
+    accountId: string,
+    authenticatedAt: Date,
+  ): Promise<{
     sessionId: string;
     audience: 'marketplace';
     sessionExpiresAt: Date;
   }> {
     try {
+      const authenticatedAtMs =
+        authenticatedAt instanceof Date ? authenticatedAt.getTime() : NaN;
+
+      if (
+        !Number.isSafeInteger(authenticatedAtMs) ||
+        authenticatedAtMs < 0 ||
+        authenticatedAtMs > Date.now()
+      ) {
+        throw new Error('Invalid authentication time.');
+      }
+
+      // Copy before awaiting database work to avoid caller mutation.
+      const authenticationTime = new Date(authenticatedAtMs);
+
       return await this.database.client.$transaction(async (transaction) => {
         const accounts = await transaction.$queryRaw<LockedAccount[]>`
           SELECT "id", "status", "emailVerifiedAt"
@@ -47,12 +64,20 @@ export class MarketplaceSessionService {
         }
 
         const createdAt = new Date();
-        const expiresAt = new Date(createdAt.getTime() + SESSION_LIFETIME_MS);
+        const expiresAt = new Date(authenticatedAtMs + SESSION_LIFETIME_MS);
+
+        if (
+          authenticationTime.getTime() > createdAt.getTime() ||
+          expiresAt.getTime() <= createdAt.getTime()
+        ) {
+          throw new Error('Invalid authentication time.');
+        }
 
         const session = await transaction.authSession.create({
           data: {
             accountId: account.id,
             audience: 'MARKETPLACE',
+            authenticatedAt: authenticationTime,
             createdAt,
             expiresAt,
           },
