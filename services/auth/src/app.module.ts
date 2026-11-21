@@ -12,13 +12,16 @@ import { AssertionReplayService } from './service-auth/assertion-replay.service'
 import { InternalAuthHttpService } from './service-auth/internal-auth-http.service';
 import { MarketplaceSessionService } from './sessions/marketplace-session.service';
 import { AccessSigningKeyService } from './access-tokens/access-signing-key.service';
+import { AccessJwksController } from './access-tokens/access-jwks.controller';
 
 @Module({
   controllers: [
     AppController,
     RegistrationController,
     EmailVerificationController,
+    AccessJwksController,
   ],
+
   providers: [
     AccessSigningKeyService,
     CredentialsService,

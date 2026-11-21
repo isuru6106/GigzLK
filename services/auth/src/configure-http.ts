@@ -3,6 +3,44 @@ import { NextFunction, Request, Response } from 'express';
 import { resolveInternalAuthOperation } from './service-auth/assertion-operation';
 
 export function configureHttp(app: INestApplication): void {
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    const originalTarget = request.originalUrl;
+    const path = originalTarget.split('?')[0];
+
+    let decodedPath: string;
+
+    try {
+      decodedPath = decodeURIComponent(path);
+    } catch {
+      response.setHeader('Cache-Control', 'no-store');
+      response.status(404).json({
+        code: 'NOT_FOUND',
+        message: 'The requested resource was not found.',
+      });
+      return;
+    }
+
+    if (!decodedPath.toLowerCase().startsWith('/.well-known')) {
+      next();
+      return;
+    }
+
+    response.setHeader('Cache-Control', 'no-store');
+
+    if (
+      request.method !== 'GET' ||
+      originalTarget !== '/.well-known/jwks.json'
+    ) {
+      response.status(404).json({
+        code: 'NOT_FOUND',
+        message: 'The requested resource was not found.',
+      });
+      return;
+    }
+
+    next();
+  });
+
   app.use(
     '/api/v1/auth',
     (_request: Request, response: Response, next: NextFunction) => {

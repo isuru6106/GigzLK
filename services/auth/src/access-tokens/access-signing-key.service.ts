@@ -25,6 +25,35 @@ export class AccessSigningKeyService {
     this.signingKey = isConfigured ? loadAccessSigningKey(config) : undefined;
   }
 
+  getPublicJwks() {
+    if (!this.signingKey) {
+      throw new Error('Access-token discovery is unavailable.');
+    }
+
+    const publicJwk = this.signingKey.publicKey.export({ format: 'jwk' });
+
+    if (
+      publicJwk.kty !== 'RSA' ||
+      typeof publicJwk.n !== 'string' ||
+      typeof publicJwk.e !== 'string'
+    ) {
+      throw new Error('Access-token discovery is unavailable.');
+    }
+
+    return {
+      keys: [
+        {
+          kty: 'RSA',
+          use: 'sig',
+          alg: 'RS256',
+          kid: this.signingKey.kid,
+          n: publicJwk.n,
+          e: publicJwk.e,
+        },
+      ],
+    };
+  }
+
   sign(input: MarketplaceAccessClaimsInput): SignedMarketplaceAccessToken {
     if (!this.signingKey) {
       throw new Error('Access-token signing is unavailable.');
