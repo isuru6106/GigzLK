@@ -39,6 +39,7 @@ describe('CredentialsService', () => {
 
   beforeAll(async () => {
     await service.onModuleInit();
+
     active = {
       id: 'test-account-id',
       passwordHash: await argon2.hash(password, {
@@ -63,6 +64,7 @@ describe('CredentialsService', () => {
         email: 'worker@example.com',
         password: candidate,
       });
+
       throw new Error('Expected rejection');
     } catch (error) {
       expect(error).toBeInstanceOf(UnauthorizedException);
@@ -73,13 +75,25 @@ describe('CredentialsService', () => {
     }
   }
 
-  it('accepts verified active accounts and returns only the account ID', async () => {
-    await expect(
-      service.validate({
-        email: ' Worker@Example.com ',
-        password,
-      }),
-    ).resolves.toEqual({ accountId: active.id });
+  it('returns only account ID and the successful authentication time', async () => {
+    const before = Date.now();
+
+    const result = await service.validate({
+      email: ' Worker@Example.com ',
+      password,
+    });
+
+    const after = Date.now();
+
+    expect(Object.keys(result).sort()).toEqual([
+      'accountId',
+      'authenticatedAt',
+    ]);
+    expect(result.accountId).toBe(active.id);
+    expect(result.authenticatedAt).toBeInstanceOf(Date);
+
+    expect(result.authenticatedAt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(result.authenticatedAt.getTime()).toBeLessThanOrEqual(after);
 
     expect(findUnique).toHaveBeenCalledWith({
       where: { emailNormalized: 'worker@example.com' },
@@ -92,6 +106,59 @@ describe('CredentialsService', () => {
     });
   });
 
+  it('captures authentication time after password verification completes', async () => {
+    const actualArgon2 = jest.requireActual<typeof import('argon2')>('argon2');
+    const verify = jest.spyOn(actualArgon2, 'verify');
+
+    let completeVerification!: (matches: boolean) => void;
+    let verificationStarted!: () => void;
+
+    const started = new Promise<void>((resolve) => {
+      verificationStarted = resolve;
+    });
+
+    verify.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          completeVerification = resolve;
+          verificationStarted();
+        }),
+    );
+
+    jest.useFakeTimers();
+
+    const initialTime = new Date('2026-11-21T14:59:00.000Z');
+    const completionTime = new Date('2026-11-21T15:00:00.000Z');
+
+    jest.setSystemTime(initialTime);
+
+    try {
+      let settled = false;
+
+      const pending = service
+        .validate({ email: 'worker@example.com', password })
+        .then((result) => {
+          settled = true;
+          return result;
+        });
+
+      await started;
+
+      expect(settled).toBe(false);
+
+      jest.setSystemTime(completionTime);
+      completeVerification(true);
+
+      const result = await pending;
+
+      expect(result.authenticatedAt).toEqual(completionTime);
+      expect(verify).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+      verify.mockRestore();
+    }
+  });
+
   it('rejects an incorrect password', async () => {
     await expectInvalid('wrong-password');
   });
@@ -102,11 +169,13 @@ describe('CredentialsService', () => {
 
   it('checks the dummy hash for an unknown account', async () => {
     findUnique.mockResolvedValue(null);
+
     const actualArgon2 = jest.requireActual<typeof import('argon2')>('argon2');
     const verify = jest.spyOn(actualArgon2, 'verify');
 
     try {
       await expectInvalid();
+
       expect(verify).toHaveBeenCalledTimes(1);
       expect(verify).toHaveBeenCalledWith(
         expect.stringMatching(/^\$argon2id\$/),
