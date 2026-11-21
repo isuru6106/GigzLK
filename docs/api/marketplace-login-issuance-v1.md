@@ -222,5 +222,227 @@ Member 1's verification scope includes safe response mapping, unchanged
 cookies on operational failure, no automatic retries, concurrent response
 ordering, and no-store on every outcome.
 
-Member 4's review of this issuance proposal remains pending.
+
+## Member 4 review clarifications
+
+Member 4 accepts the proposed atomic issuance direction, credential-version
+comparison under the account lock, and operational-error handling for
+uncertain commit outcomes.
+
+Auth owns credential-version implementation and concurrency tests.
+
+### Gateway retries
+
+The current gateway uses proxy_next_upstream off.
+Member 4's isolated failure tests verified no upstream retries in the
+tested scenarios.
+
+Member 4 will preserve this configuration and verify it against real Auth
+during integration. BFF retry behavior remains owned by Member 1.
+
+These isolated results do not establish verified end-to-end retry behavior.
+
+### Credential-response retention requirements
+
+No retained credential-response mechanism is approved or implemented.
+
+If the bounded login-attempt design requires retained responses, it must
+specify:
+
+- Auth-owned storage using authenticated encryption.
+- A dedicated, versioned runtime encryption key, separate from signing
+  and service-assertion keys.
+- Binding to the authenticated caller, operation, attempt identifier,
+  and expiry.
+- Expiry enforced on every retrieval, independently of cleanup.
+- Concrete retention limits and cleanup behavior.
+- Key rotation, key-loss recovery, and backup handling.
+- No plaintext credentials in logs, traces, backups, or general-purpose
+  caches.
+
+Unavailable storage or decryption must produce an operational error.
+Uncertain commits must not be described as rolled back.
+Existing BFF cookies must be preserved on operational failure.
+
+### Next agreement
+
+Members 1 and 2 will define the bounded login-attempt contract.
+Member 4 will review its concrete infrastructure requirements.
+
+Acceptance covers the issuance direction only. Outstanding contracts,
+implementation, and tests remain prerequisites.
+
+Login issuance, refresh, and live integration remain disconnected.
+Login issuance, refresh, and live integration remain disconnected.
+
+## Proposed bounded login-attempt contract
+
+Status: PROPOSED — requires Members 1 and 4 review.
+
+### Attempt identity and binding
+
+The BFF generates a cryptographically random attempt identifier containing
+at least 128 bits of randomness for each explicit login attempt.
+
+Auth binds the attempt to:
+- The authenticated BFF caller.
+- The marketplace audience.
+- The login operation.
+- A server-issued pre-session context.
+- The submitted credential payload through a keyed fingerprint.
+
+The pre-session context must be validated by the BFF and bound to its
+HttpOnly context cookie and CSRF protection. A browser-supplied context
+identifier alone is insufficient.
+
+The keyed fingerprint covers the normalized email and exact password,
+using an unambiguous encoding and a dedicated runtime-provisioned HMAC key.
+Never persist the plaintext password or an unkeyed password fingerprint.
+
+Exact wire fields, context transport, fingerprint encoding, and key
+configuration require agreement before implementation.
+
+### Proposed bounds
+
+- An attempt may begin issuance for five minutes after Auth admits it.
+- Duplicate-prevention metadata remains for twenty-four hours.
+- Admission expiry is checked before issuance writes.
+- An expired attempt cannot be restarted or reused.
+- Unknown identifiers cannot recreate an expired attempt: admission
+  requires an unexpired server-issued attempt context.
+- Cleanup never substitutes for expiry checks.
+- Admission and recovery require reviewed rate and storage limits.
+
+These durations are proposed defaults, not implemented guarantees.
+
+### Duplicate handling
+
+A database uniqueness constraint binds caller, operation, and attempt ID.
+
+Concurrent requests for the same attempt cannot create separate sessions.
+Different payloads for the same attempt are rejected without changing
+the original attempt.
+
+A duplicate in-progress request returns an operational conflict without
+credentials or cookie changes. It does not start another verification
+or issuance operation.
+
+Automatic retries remain disabled at the UI, BFF, and gateway.
+
+### Atomic completion
+
+The issuance transaction must lock the attempt record and account using
+a documented, consistent lock order.
+
+The transaction rechecks attempt expiry, account eligibility, and the
+credential version captured during password verification.
+
+Session creation, refresh-hash persistence, and marking the attempt as
+committed share one transaction. The attempt records its associated
+session ID.
+
+Signing occurs before commit. Credentials are returned only after
+confirmed commit.
+
+A stale worker cannot commit after recovery has cancelled its attempt.
+
+### No retained credential responses
+
+This proposal stores no recoverable access or refresh credential response.
+
+A duplicate request after commit must not return AUTHENTICATED without
+credentials, mint replacement credentials, or create another session.
+
+It returns a safe attempt-state response requiring explicit recovery.
+Attempt-state responses are server-only and require the same caller and
+validated pre-session binding. They never establish user authentication.
+
+The original complete credential envelope is returned only by the
+successful issuance operation after confirmed commit.
+
+### Uncertain-outcome recovery
+
+A timeout or lost acknowledgement leaves the browser outcome uncertain.
+The BFF preserves existing cookies and reports an operational error.
+
+Recovery is an explicit user action, not an automatic login retry.
+
+Auth locks the attempt record before resolving it:
+- If committed, revoke only the session associated with that attempt
+  and mark the attempt cancelled in the same transaction.
+- If issuance has not committed, cancel the attempt so an existing
+  worker cannot later issue credentials for it.
+- If the state cannot be established or cancellation cannot be confirmed,
+  return an operational error and do not authorize a replacement attempt.
+
+Only after confirmed cancellation may an explicit new login attempt
+proceed with a fresh attempt ID and fresh credential verification.
+
+Recovery must also work when the browser received credentials but the BFF
+did not record delivery. The old session may be revoked; the user must
+complete a new login.
+
+Session revocation does not invalidate an already signed offline token
+immediately. Existing access tokens may remain usable until expiry.
+Sensitive operations require authoritative current-state checks.
+
+### Browser concurrency and cookie ordering
+
+Auth duplicate prevention does not solve browser cookie ordering.
+
+Before enabling login, Member 1 must specify how all tabs and BFF replicas
+sharing the same browser context serialize login and recovery.
+
+An older HTTP response must not overwrite credentials from a newer
+attempt. A server-side generation check alone is insufficient if an older
+Set-Cookie response is already in flight.
+
+The review must cover delayed responses, browser reloads, multi-tab
+requests, expired coordination leases, logout, and recovery.
+
+This browser delivery protocol remains an explicit integration blocker.
+
+### Storage and recovery behavior
+
+Attempt records and fingerprints are Auth-owned and access-restricted.
+They must not enter ordinary application logs or general-purpose caches.
+
+Dedicated fingerprint keys require versioning and bounded retention.
+Unavailable keys or storage deny admission and recovery.
+
+Backups and restore procedures must prevent old attempt records or
+sessions from being revived as valid issuance state. Concrete recovery
+and retention procedures require Member 4 review.
+
+No credential-response encryption key is required by this proposal because
+recoverable credential responses are not retained.
+
+### Required tests
+
+- Concurrent identical attempts create at most one session.
+- Payload mismatch cannot reuse an attempt.
+- Caller, operation, audience, and context isolation.
+- Five-minute admission and twenty-four-hour retention boundaries.
+- Cancellation racing with password verification and issuance.
+- Signing failure rolls back session and refresh writes.
+- Lost commit acknowledgement resolves through durable attempt state.
+- Recovery revokes only the session belonging to its attempt.
+- Cancelled or expired attempts cannot be resurrected.
+- Password changes invalidate an earlier credential version.
+- Delayed responses cannot overwrite newer browser cookies.
+- Storage/key failures preserve existing cookies and return no success.
+- No-store and secret exclusion on every outcome.
+
+### Review decisions required
+
+Member 1: agree on the context binding, explicit recovery UX, and a
+concrete browser delivery/ordering protocol.
+
+Member 2: define attempt state transitions, wire schemas, transaction
+locking, payload fingerprinting, and concurrency tests.
+
+Member 4: review bounds, storage limits, runtime fingerprint keys,
+backup/restore behavior, and gateway integration.
+
+This is a proposal, not an implemented login-attempt mechanism.
 Login issuance, refresh, and live integration remain disconnected.
