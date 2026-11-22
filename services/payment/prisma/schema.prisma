@@ -13,15 +13,58 @@ enum Currency {
 }
 
 model Payment {
-  id           String    @id @default(uuid()) @db.Uuid
-  assignmentId String    @unique @db.Uuid
-  grossMinor   BigInt
-  currency     Currency  @default(LKR)
-  fundedAt     DateTime? @db.Timestamptz(3)
-  approvedAt   DateTime? @db.Timestamptz(3)
-  holdActive   Boolean   @default(false)
-  releasedAt   DateTime? @db.Timestamptz(3)
-  version      Int       @default(0)
-  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  id             String          @id @default(uuid()) @db.Uuid
+  assignmentId   String          @unique @db.Uuid
+  grossMinor     BigInt
+  currency       Currency        @default(LKR)
+  fundedAt       DateTime?       @db.Timestamptz(3)
+  approvedAt     DateTime?       @db.Timestamptz(3)
+  holdActive     Boolean         @default(false)
+  releasedAt     DateTime?       @db.Timestamptz(3)
+  version        Int             @default(0)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
+  releaseJournal ReleaseJournal?
+}
+
+enum AccountingSide {
+  DEBIT
+  CREDIT
+}
+
+enum LedgerAccount {
+  PROTECTED_FUNDS
+  WORKER_PAYABLE
+  COMMISSION_REVENUE
+}
+
+model ReleaseJournal {
+  id              String   @id @default(uuid()) @db.Uuid
+  paymentId       String   @unique @db.Uuid
+  callerId        String   @db.VarChar(100)
+  idempotencyKey  String   @db.VarChar(128)
+  grossMinor      BigInt
+  commissionMinor BigInt
+  netMinor        BigInt
+  currency        Currency @default(LKR)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  payment Payment       @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  entries LedgerEntry[]
+
+  @@unique([callerId, idempotencyKey])
+}
+
+model LedgerEntry {
+  id          String         @id @default(uuid()) @db.Uuid
+  journalId   String         @db.Uuid
+  position    Int
+  account     LedgerAccount
+  side        AccountingSide
+  amountMinor BigInt
+  currency    Currency       @default(LKR)
+
+  journal ReleaseJournal @relation(fields: [journalId], references: [id], onDelete: Restrict)
+
+  @@unique([journalId, position])
 }
