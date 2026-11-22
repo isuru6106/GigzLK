@@ -1,0 +1,22 @@
+name: gigzlk-vector-dev
+
+services:
+  vector-db:
+    image: pgvector/pgvector:0.8.7-pg17-bookworm
+    environment:
+      POSTGRES_USER: gigzlk_vector_admin
+      POSTGRES_PASSWORD: ${ML_DB_PASSWORD:?Set ML_DB_PASSWORD}
+      POSTGRES_DB: gigzlk_vector_dev
+    volumes:
+      - vector_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U gigzlk_vector_admin -d gigzlk_vector_dev
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  vector_dev_data:
