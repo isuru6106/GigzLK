@@ -100,6 +100,9 @@ describe('Payment repository with PostgreSQL', () => {
       });
 
       if (payment) {
+        await database.outboxEvent.deleteMany({
+          where: { aggregateId: payment.id },
+        });
         const journal = await database.releaseJournal.findUnique({
           where: { paymentId: payment.id },
         });
@@ -256,6 +259,43 @@ describe('Payment repository with PostgreSQL', () => {
       const replay = await freshService.release(paymentId, 'test-caller', key);
 
       expect(replay).toEqual(first);
+      const events = await database.outboxEvent.findMany({
+        where: { aggregateId: paymentId },
+      });
+
+      // Concurrent requests and a later retry produce one durable event.
+      expect(events).toHaveLength(1);
+
+      const event = events[0];
+
+      expect(event).toMatchObject({
+        eventType: 'PAYMENT_RELEASED',
+        schemaVersion: 1,
+        producer: 'payment',
+        aggregateId: paymentId,
+        aggregateVersion: payment?.version,
+        occurredAt: payment?.releasedAt,
+        causationId: null,
+        publishedAt: null,
+        attempts: 0,
+      });
+
+      expect(event.eventId).toEqual(expect.any(String));
+      expect(event.correlationId).toEqual(expect.any(String));
+
+      expect(event.data).toEqual({
+        paymentId,
+        assignmentId: payment?.assignmentId,
+        releaseJournalId: first.id,
+        grossMinor: '1000000',
+        commissionMinor: '100000',
+        netMinor: '900000',
+        currency: 'LKR',
+        releasedAt: payment?.releasedAt?.toISOString(),
+      });
+
+      // Delivery metadata must not leak into the event's business payload.
+      expect(() => JSON.stringify(event.data)).not.toThrow();
 
       expect(
         await database.releaseJournal.count({ where: { paymentId } }),
@@ -289,6 +329,12 @@ describe('Payment repository with PostgreSQL', () => {
 
       expect(
         await database.releaseJournal.count({ where: { paymentId } }),
+      ).toBe(0);
+
+      expect(
+        await database.outboxEvent.count({
+          where: { aggregateId: paymentId },
+        }),
       ).toBe(0);
     });
   });
@@ -370,6 +416,65 @@ describe('Payment repository with PostgreSQL', () => {
       expect((await repository.findById(paymentId))?.releasedAt).toBeInstanceOf(
         Date,
       );
+    });
+  });
+  it('rolls back payment and journal when the outbox insert fails', async () => {
+    await withPayment(async (paymentId) => {
+      await repository.markFunded(paymentId);
+      await repository.markApproved(paymentId);
+
+      const before = await repository.findById(paymentId);
+      const key = randomUUID();
+
+      // Keep real PostgreSQL transactions, but simulate an outbox failure.
+      const failingDatabase = database.$extends({
+        query: {
+          outboxEvent: {
+            create() {
+              throw new Error('Simulated outbox insert failure');
+            },
+          },
+        },
+      });
+
+      // The extended client lacks Nest lifecycle methods in its type.
+      // This cast is limited to this failure-injection test.
+      const failingService = new PaymentReleaseService(
+        failingDatabase as unknown as DatabaseService,
+      );
+
+      await expect(
+        failingService.release(paymentId, 'test-caller', key),
+      ).rejects.toThrow('Simulated outbox insert failure');
+
+      expect(await repository.findById(paymentId)).toEqual(before);
+
+      expect(
+        await database.releaseJournal.count({
+          where: { paymentId },
+        }),
+      ).toBe(0);
+
+      expect(
+        await database.outboxEvent.count({
+          where: { aggregateId: paymentId },
+        }),
+      ).toBe(0);
+
+      // A normal retry with the same key must still succeed.
+      const service = new PaymentReleaseService(database);
+      const journal = await service.release(paymentId, 'test-caller', key);
+
+      expect(journal.paymentId).toBe(paymentId);
+      expect((await repository.findById(paymentId))?.releasedAt).toBeInstanceOf(
+        Date,
+      );
+
+      expect(
+        await database.outboxEvent.count({
+          where: { aggregateId: paymentId },
+        }),
+      ).toBe(1);
     });
   });
 });

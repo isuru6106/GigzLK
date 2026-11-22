@@ -68,3 +68,23 @@ model LedgerEntry {
 
   @@unique([journalId, position])
 }
+
+model OutboxEvent {
+  eventId          String    @id @default(uuid()) @db.Uuid
+  eventType        String    @db.VarChar(100)
+  schemaVersion    Int       @default(1)
+  producer         String    @db.VarChar(100)
+  aggregateId      String    @db.Uuid
+  aggregateVersion Int
+  occurredAt       DateTime  @db.Timestamptz(3)
+  correlationId    String    @db.Uuid
+  causationId      String?   @db.Uuid
+  data             Json
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  publishedAt      DateTime? @db.Timestamptz(3)
+  attempts         Int       @default(0)
+  nextAttemptAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@unique([aggregateId, aggregateVersion, eventType])
+  @@index([publishedAt, nextAttemptAt, createdAt])
+}

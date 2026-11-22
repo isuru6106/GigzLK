@@ -3,6 +3,7 @@ import { DatabaseService } from '../database.service';
 import { Prisma } from '../generated/prisma/client';
 import { calculateCommission } from './commission';
 import { createReleaseJournal } from './release-journal';
+import { randomUUID } from 'node:crypto';
 
 @Injectable()
 export class PaymentReleaseService {
@@ -61,6 +62,8 @@ export class PaymentReleaseService {
             const amounts = calculateCommission(grossMinor);
             const lines = createReleaseJournal(grossMinor);
 
+            const releasedAt = new Date();
+
             const changed = await tx.payment.updateMany({
               where: {
                 id: paymentId,
@@ -71,7 +74,7 @@ export class PaymentReleaseService {
                 releasedAt: null,
               },
               data: {
-                releasedAt: new Date(),
+                releasedAt,
                 version: { increment: 1 },
               },
             });
@@ -80,7 +83,7 @@ export class PaymentReleaseService {
               throw new Error('Payment state changed before release');
             }
 
-            return tx.releaseJournal.create({
+            const journal = await tx.releaseJournal.create({
               data: {
                 paymentId,
                 callerId,
@@ -106,6 +109,29 @@ export class PaymentReleaseService {
                 entries: { orderBy: { position: 'asc' } },
               },
             });
+            await tx.outboxEvent.create({
+              data: {
+                eventType: 'PAYMENT_RELEASED',
+                schemaVersion: 1,
+                producer: 'payment',
+                aggregateId: payment.id,
+                aggregateVersion: payment.version + 1,
+                occurredAt: releasedAt,
+                correlationId: randomUUID(),
+                data: {
+                  paymentId: payment.id,
+                  assignmentId: payment.assignmentId,
+                  releaseJournalId: journal.id,
+                  grossMinor: journal.grossMinor.toString(),
+                  commissionMinor: journal.commissionMinor.toString(),
+                  netMinor: journal.netMinor.toString(),
+                  currency: journal.currency,
+                  releasedAt: releasedAt.toISOString(),
+                },
+              },
+            });
+
+            return journal;
           },
           {
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
