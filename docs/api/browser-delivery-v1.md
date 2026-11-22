@@ -508,3 +508,43 @@ cross-replica races, delayed cookie delivery and restore invalidation.
 Documentation consolidation does not approve or implement this mechanism.
 Cookie installation, login issuance, refresh and live integration remain
 disconnected.
+### Proposed cookie expiry and credential deletion clarification
+
+Member 1 confirms that the following accurately records the proposals
+and their conditions. This is not acceptance of the delivery mechanism.
+
+Authenticated cookies must carry an absolute Expires value no later than
+the linked Auth session's absolute deadline. Delayed delivery must not
+extend server-side validity. Server-side expiry remains authoritative.
+Any additional cookie lifetime attribute must not permit a later deadline.
+
+Under this proposal, logout sends no authenticated-cookie deletion or
+replacement header.
+
+Proposed credential deletion is atomic with BFF fencing/disabling.
+Reconciliation retains only non-secret references and processing metadata,
+never raw access tokens, refresh tokens or passwords.
+
+This deletion rule depends on a reviewed Auth revocation contract that:
+
+- Uses bound audience and attempt/session references without requiring
+  the user's access or refresh credential.
+- Independently authenticates the BFF and validates its authority over
+  the referenced audience and attempt/session.
+- Provides idempotent revocation.
+- Distinguishes confirmed revocation from unknown or unavailable state.
+- Does not treat possession of a reference as authorization.
+- Prevents cancellation of an admitted attempt from being bypassed by
+  a late issuance worker.
+
+If session issuance is uncertain, the authorized attempt association must
+be resolved through the reviewed cancellation/revocation contract.
+An unknown reference cannot establish confirmed revocation.
+
+Until this contract is reviewed, the deletion rule remains conditional;
+this paragraph does not authorize indefinite credential retention.
+
+Member 4's review, flow binding, bootstrap recovery and implementation
+tests remain pending. Storage ownership and the delivery mechanism remain
+unapproved. Cookie installation, login issuance, refresh and live
+integration remain disconnected.
