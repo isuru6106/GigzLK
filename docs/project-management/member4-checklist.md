@@ -21,8 +21,8 @@ Update statuses only when supporting evidence is available.
 
 ## 2. Planning and integration contracts
 
-- [ ] Merge this checklist through a reviewed PR.
-- [ ] Create Issues with acceptance criteria and dependencies.
+- [x] Merge this checklist through PR #52.
+- [ ] Create implementation Issues with acceptance criteria and dependencies.
 - [ ] Agree final assessed AI scope, priorities and milestones.
 - [ ] Confirm Job/User fields, identifiers and authorized API/event contracts.
 - [ ] Confirm recommendation/search response requirements with Member 1.
