@@ -253,3 +253,183 @@ contracts are reviewed.
 
 This document does not approve live data ingestion or integration.
 Record reviewer decisions and unresolved items explicitly.
+
+## 12. Cross-member review record
+
+These reviews support synthetic-fixture development.
+They do not approve live source contracts or integration.
+
+### Member 1 — frontend direction
+
+Accepted direction:
+- Explain recommendations using safe text and structured reason codes.
+- Distinguish missing information from known mismatches.
+- Show known factors even when the overall assessment is incomplete.
+- Keep reputation separate from job-specific suitability.
+- Preserve ordinary browsing when recommendations are unavailable.
+- Require authorized display data; an ML-returned ID does not grant
+  permission to retrieve private profile information.
+- Recheck authoritative eligibility when an action is submitted.
+
+Proposed response requirements:
+- Candidate ID, rank and source revision.
+- Assessment status, nullable suitability score and factor assessments.
+- Explanation codes, safe explanation text and missing-field identifiers.
+- Method, scoring version, embedding-model version and freshness metadata.
+- Response fields: items, nextCursor, hasMore, generatedAt, warnings
+  and a result-set identifier.
+
+Exact schemas and authorized display composition remain OPEN.
+
+Required UI states:
+- Initial loading and loading another page.
+- Empty results.
+- Incomplete assessment.
+- Temporary unavailability.
+- Stale results.
+- Unauthorized access.
+
+Partial results require an explicit reviewed contract.
+
+### Member 2 — source boundaries
+
+Member 2 supports synthetic-fixture development and separate ML projections.
+
+No implemented Job/User/profile source was identified in the checkout
+reviewed. Implementation on another branch or repository is unverified.
+
+Auth account IDs use UUIDs. This does not establish the identifier format
+or account relationship of future worker profiles.
+
+worker_id denotes the worker entity assessed by ML.
+Whether it maps to an Auth account or a separate profile remains OPEN.
+Synthetic IDs must not be presented as verified production identifiers.
+
+The following remain OPEN:
+- Job/User source schemas and entity relationships.
+- Canonical skill/location identifiers and normalization policies.
+- Discoverability, caller authorization and disclosure policies.
+- Job-specific experience derivation, including overlapping periods,
+  evidence sources and unknown versus zero values.
+- Source revisions, event/API contracts and idempotent processing.
+- Visibility withdrawal, deletion, tombstone retention and reconciliation.
+- Source freshness and visibility-failure behavior.
+
+Opaque identifiers must not be trimmed or case-normalized unless their
+owning contract explicitly permits it.
+
+Missing availability remains unknown.
+
+### Member 3 — emergency boundary
+
+Accepted ownership direction:
+- Member 4 retrieves and ranks replacement candidates.
+- Member 3 coordinates no-show escalation, operational conflict checks,
+  replacement requests and urgent offers.
+- Member 2 owns authoritative contract, offer, assignment and identifier
+  rules within the relevant domains.
+
+A recommendation neither reserves a worker nor confirms a replacement.
+
+Future emergency inputs may include:
+- Original assignment ID and job ID.
+- Remaining work interval and latest acceptable arrival time.
+- Required skills, location/remote status and excluded workers.
+- Authoritative replacement budget and worker net amount.
+- Emergency opt-in, availability, travel distance and minimum payment.
+
+Exact schemas and preference-storage ownership remain OPEN.
+
+Missing opt-in or availability must not be interpreted as consent.
+Distance and ETA require an identified source and uncertainty information.
+Semantic similarity must not be used to invent distance or ETA.
+Avoid unnecessary disclosure of precise personal location.
+
+Confirmation must:
+- Recheck eligibility, availability, commitments, preferences and budget.
+- Recheck remaining capacity.
+- Require an unexpired offer and explicit worker acceptance.
+- Prevent concurrent confirmations filling the same replacement slot.
+- Preserve the original assignment and attendance history.
+
+Replacement funding, cancellation, disputes, refunds and releases remain
+separate Member 3 workflows. Recommendations must not automatically
+declare a no-show or impose a penalty.
+
+Emergency Operations and matching integration are not implemented by
+this proposal.
+
+## 13. Member 4 proposed initial behavior
+
+These defaults are proposals for the next implementation milestone,
+not additional cross-member acceptance.
+
+### Scores and explanations
+
+- Preserve the existing rules-v1 suitability scale: 0 to 100.
+- Keep an incomplete overall assessment null.
+- Show known factor assessments and explicit missing-field identifiers.
+- Keep semantic similarity internal initially.
+- Use existing scoring reason codes where applicable.
+- Define additional recommendation codes before exposing them.
+- Do not claim that semantic similarity or suitability establishes
+  eligibility, reputation or hiring probability.
+
+### Pagination
+
+Target opaque cursor pagination:
+- Default page size: 20.
+- Maximum requested page size: 100.
+- These are response limits, not finalized vector retrieval limits.
+
+Before implementing cursors, define:
+- Binding to the authorized caller, query and filters.
+- Ranked result-set identity and ordering.
+- Fixed expiry and restart behavior.
+- Integrity protection and storage ownership.
+- Visibility revalidation on every page.
+
+A ranked snapshot cannot preserve permission to disclose a candidate.
+The frontend resets pagination when filters change, deduplicates by
+candidate ID and ignores responses for superseded queries.
+
+Cursor lifetime, candidate retrieval budget and pagination storage remain OPEN.
+
+### Failure and freshness behavior
+
+Initial implementation does not support partial-success responses.
+
+- A successful search with no candidates returns an empty result set.
+- Infrastructure failure returns an explicit unavailable outcome.
+- Missing assessment data does not become a zero score.
+- Unknown visibility never authorizes disclosure.
+- A failed required visibility check must not be disguised as an
+  empty-success response.
+- Successful authoritative denial may exclude a candidate.
+- Stale results must not imply current availability or eligibility.
+
+Exact error schemas, freshness thresholds and live visibility mechanisms
+remain OPEN.
+
+### Independent development
+
+Synthetic fixtures may model:
+- Visible and hidden candidates.
+- Expired jobs.
+- Missing skills, experience and availability.
+- Source updates, deletion and out-of-order delivery.
+- Related wording and unrelated descriptions.
+
+Fixtures must be clearly labelled and contain no real personal data.
+They establish implementation behavior, not production source compatibility
+or real-world recommendation accuracy.
+
+## 14. Next milestone
+
+Implement and evaluate a local semantic recommendation prototype using
+synthetic job and worker fixtures.
+
+Technical work may proceed while source contracts remain under review.
+Do not enable live ingestion or expose private worker information.
+
+Issue #51 remains open for unresolved planning and source-contract items.
