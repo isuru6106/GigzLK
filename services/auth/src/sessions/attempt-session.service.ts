@@ -12,6 +12,7 @@ const SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 type LockedAttempt = {
   id: string;
+  reservationId: string | null;
   callerIssuer: string;
   audience: string;
   contextBinding: string;
@@ -30,7 +31,7 @@ type LockedAccount = {
 export class AttemptSessionService {
   constructor(private readonly database: DatabaseService) {}
 
-  // Internal storage primitive only.
+  // Internal storage primitive for attempts without admission reservations.
   // Credentials must come from successful password verification.
   // Authority must come from independently validated internal processing.
   async createForAttempt(
@@ -93,6 +94,7 @@ export class AttemptSessionService {
         const attempts = await transaction.$queryRaw<LockedAttempt[]>`
           SELECT
             "id",
+            "reservationId",
             "callerIssuer",
             "audience",
             "contextBinding",
@@ -107,6 +109,7 @@ export class AttemptSessionService {
 
         if (
           !attempt ||
+          attempt.reservationId != null ||
           attempt.callerIssuer !== callerIssuer ||
           attempt.audience !== 'MARKETPLACE' ||
           attempt.contextBinding !== contextBinding ||
