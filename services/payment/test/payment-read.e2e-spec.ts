@@ -169,7 +169,19 @@ describe('Payment read authorization', () => {
       .expect(404)
       .expect('Cache-Control', 'no-store');
 
-    expect(denied.body as unknown).toEqual(missing.body as unknown);
+    const missingBody = missing.body as {
+      code: string;
+      message: string;
+      requestId: string;
+    };
+
+    const deniedBody = denied.body as typeof missingBody;
+
+    expect(deniedBody.code).toBe(missingBody.code);
+    expect(deniedBody.message).toBe(missingBody.message);
+    expect(deniedBody.requestId).toBe(denied.headers['x-request-id']);
+    expect(missingBody.requestId).toBe(missing.headers['x-request-id']);
+    expect(deniedBody.requestId).not.toBe(missingBody.requestId);
   });
 
   it('denies access when assignment validation is unavailable', async () => {
@@ -188,10 +200,24 @@ describe('Payment read authorization', () => {
       new Error('Sensitive database connection details'),
     );
 
-    await getPayment().expect(503).expect('Cache-Control', 'no-store').expect({
-      code: 'PAYMENT_UNAVAILABLE',
-      message: 'Payment storage is unavailable',
-    });
+    await getPayment()
+      .expect(503)
+      .expect('Cache-Control', 'no-store')
+      .expect((response) => {
+        const body = response.body as {
+          code: string;
+          message: string;
+          requestId: string;
+        };
+
+        expect(body).toEqual({
+          code: 'PAYMENT_UNAVAILABLE',
+          message: 'Payment storage is unavailable',
+          requestId: expect.any(String),
+        });
+
+        expect(body.requestId).toBe(response.headers['x-request-id']);
+      });
 
     expect(assignments.canReadPayment).not.toHaveBeenCalled();
   });

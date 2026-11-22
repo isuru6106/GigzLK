@@ -5,10 +5,13 @@ import {
   Headers,
   Param,
   UnauthorizedException,
+  UseFilters,
 } from '@nestjs/common';
 import { PaymentReadService } from './payment-read.service';
 
+import { PaymentExceptionFilter } from './payment-exception.filter';
 @Controller('api/v1/payments')
+@UseFilters(PaymentExceptionFilter)
 export class PaymentController {
   constructor(private readonly payments: PaymentReadService) {}
 
