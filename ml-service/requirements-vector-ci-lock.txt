@@ -1,0 +1,5 @@
+# Synthetic vector database checks on Linux with Python 3.13.
+# Separate from embedding-model and runtime dependencies.
+numpy==2.5.5
+psycopg==3.3.9
+psycopg-binary==3.3.9

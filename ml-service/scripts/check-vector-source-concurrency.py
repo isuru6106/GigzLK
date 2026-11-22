@@ -1,7 +1,7 @@
 """Check synthetic source-update races using independent connections."""
 
 from concurrent.futures import ThreadPoolExecutor
-from getpass import getpass
+from vector_db_credentials import read_vector_password
 from threading import Barrier
 from uuid import uuid4
 
@@ -16,7 +16,7 @@ def require(condition, message):
 
 
 def main():
-    password = getpass("Local vector client password: ")
+    password = read_vector_password()
     prefix = f"synthetic-worker-concurrency-{uuid4().hex}"
     probe_ids = [
         f"{prefix}-duplicate",

@@ -189,3 +189,30 @@ after the checks.
 
 Direct table writes can bypass these helpers. Live source contracts,
 ingestion, authorization and frontend integration remain pending.
+
+## Synthetic vector database CI
+
+.github/workflows/vector-checks.yml defines isolated Linux database checks
+using Python 3.13 and a fresh PostgreSQL/pgvector container.
+
+The job generates temporary database passwords, applies the bootstrap,
+schema, fixtures and restricted-client role, and runs SQL constraints,
+retrieval, source-update, concurrency and publication-race checks.
+
+Python checks connect as gigzlk_vector_client. Administrative setup and
+SQL permission/constraint checks use the isolated database administrator.
+
+ML_VECTOR_DB_PASSWORD provides non-interactive password input.
+Local execution retains the hidden password prompt when the variable is
+absent. CI fails immediately if the variable is missing or empty.
+
+Retrieval and source-update checks create their own synthetic numerical
+vectors and require no previously indexed embeddings. Database CI uses
+requirements-vector-ci-lock.txt without PyTorch or model downloads.
+
+The job verifies temporary-record cleanup and removes its container.
+Embedding-model execution, language quality, full vector-development
+dependency locking and live integration are outside this workflow.
+
+The first successful GitHub Actions run must be recorded before marking
+automated vector CI as verified.

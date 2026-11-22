@@ -1,0 +1,205 @@
+name: Synthetic vector checks
+
+on:
+  pull_request:
+    paths:
+      - "ml-service/**"
+      - "infrastructure/docker/vector/**"
+      - "infrastructure/docker/compose.vector-*.yaml"
+      - ".github/workflows/vector-checks.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ml-service/**"
+      - "infrastructure/docker/vector/**"
+      - "infrastructure/docker/compose.vector-*.yaml"
+      - ".github/workflows/vector-checks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vector-database-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      CI: "true"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: ml-service/requirements-vector-ci-lock.txt
+
+      - name: Install database-check dependencies
+        run: |
+          python -m pip install --only-binary=:all: \
+            -r ml-service/requirements-vector-ci-lock.txt
+          python -m pip check
+
+      - name: Generate temporary database passwords
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import secrets
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
+              for name in ("POSTGRES_PASSWORD", "ML_VECTOR_DB_PASSWORD"):
+                  value = secrets.token_hex(32)
+                  print(f"::add-mask::{value}")
+                  output.write(f"{name}={value}\n")
+          PY
+
+      - name: Start isolated vector database
+        shell: bash
+        run: |
+          docker run -d \
+            --name gigzlk-vector-ci \
+            --publish 127.0.0.1:5544:5432 \
+            --env POSTGRES_PASSWORD \
+            --env POSTGRES_USER=gigzlk_vector_admin \
+            --env POSTGRES_DB=gigzlk_vector_dev \
+            --health-cmd="pg_isready -U gigzlk_vector_admin -d gigzlk_vector_dev" \
+            --health-interval=2s \
+            --health-timeout=5s \
+            --health-retries=30 \
+            pgvector/pgvector:0.8.7-pg17-bookworm
+
+          for attempt in {1..60}; do
+            status="$(docker inspect \
+              --format '{{.State.Health.Status}}' gigzlk-vector-ci)"
+
+            if [ "$status" = "healthy" ]; then
+              exit 0
+            fi
+
+            if [ "$status" = "unhealthy" ]; then
+              echo "Vector database became unhealthy."
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          echo "Vector database startup timed out."
+          exit 1
+
+      - name: Bootstrap fresh synthetic database
+        shell: bash
+        run: |
+          for script in \
+            001-bootstrap.sql \
+            002-synthetic-schema.sql \
+            003-synthetic-fixtures.sql \
+            004-client-role.sql
+          do
+            docker exec -i gigzlk-vector-ci \
+              psql -X -v ON_ERROR_STOP=1 \
+              -U gigzlk_vector_admin \
+              -d gigzlk_vector_dev \
+              < "infrastructure/docker/vector/$script"
+          done
+
+      - name: Configure restricted client password
+        shell: bash
+        run: |
+          docker exec -i \
+            --env ML_VECTOR_DB_PASSWORD \
+            gigzlk-vector-ci \
+            psql -X -v ON_ERROR_STOP=1 \
+            -U gigzlk_vector_admin \
+            -d gigzlk_vector_dev <<'SQL'
+          \getenv client_password ML_VECTOR_DB_PASSWORD
+          SELECT format(
+              'ALTER ROLE gigzlk_vector_client PASSWORD %L',
+              :'client_password'
+          ) \gexec
+          SQL
+
+      - name: Check SQL schema and embedding constraints
+        shell: bash
+        run: |
+          for script in \
+            check-synthetic-schema.sql \
+            check-synthetic-embeddings.sql
+          do
+            docker exec -i gigzlk-vector-ci \
+              psql -X -v ON_ERROR_STOP=1 \
+              -U gigzlk_vector_admin \
+              -d gigzlk_vector_dev \
+              < "infrastructure/docker/vector/$script"
+          done
+
+      - name: Verify retrieval imports without model libraries
+        shell: bash
+        run: |
+          python - <<'PY'
+          import runpy
+          import sys
+          from pathlib import Path
+
+          scripts = Path("ml-service/scripts").resolve()
+          sys.path.insert(0, str(scripts))
+          module = runpy.run_path(str(scripts / "demo-vector-retrieval.py"))
+
+          assert callable(module["search_candidates"])
+          assert "sentence_transformers" not in sys.modules
+          assert "torch" not in sys.modules
+          print("Retrieval imports without embedding-model libraries.")
+          PY
+
+      - name: Run restricted-client database checks
+        shell: bash
+        run: |
+          for script in \
+            check-vector-db.py \
+            check-vector-retrieval.py \
+            check-vector-source-updates.py \
+            check-vector-source-concurrency.py \
+            check-vector-publication-races.py
+          do
+            echo "Running $script"
+            python -u "ml-service/scripts/$script"
+          done
+
+      - name: Verify temporary record cleanup
+        shell: bash
+        run: |
+          docker exec -i gigzlk-vector-ci \
+            psql -X -v ON_ERROR_STOP=1 \
+            -U gigzlk_vector_admin \
+            -d gigzlk_vector_dev <<'SQL'
+          DO $$
+          BEGIN
+              IF (SELECT count(*) FROM ml.synthetic_entities) <> 7 THEN
+                  RAISE EXCEPTION 'Unexpected source records after checks';
+              END IF;
+
+              IF EXISTS (SELECT 1 FROM ml.synthetic_embeddings) THEN
+                  RAISE EXCEPTION 'Temporary embeddings remain';
+              END IF;
+
+              IF EXISTS (SELECT 1 FROM ml.embedding_models) THEN
+                  RAISE EXCEPTION 'Temporary model registrations remain';
+              END IF;
+
+              RAISE NOTICE 'Temporary record cleanup verified.';
+          END
+          $$;
+          SQL
+
+      - name: Remove isolated database
+        if: always()
+        shell: bash
+        run: docker rm -f -v gigzlk-vector-ci >/dev/null 2>&1 || true

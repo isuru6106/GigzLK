@@ -1,12 +1,12 @@
 """Check the local synthetic database using the restricted login."""
 
-from getpass import getpass
+from vector_db_credentials import read_vector_password
 
 import psycopg
 
 
 def main() -> None:
-    password = getpass("Local vector client password: ")
+    password = read_vector_password()
 
     try:
         with psycopg.connect(
