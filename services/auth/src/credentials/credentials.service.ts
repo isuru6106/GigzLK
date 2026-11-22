@@ -9,6 +9,12 @@ import * as argon2 from 'argon2';
 import { DatabaseService } from '../database.service';
 import { CredentialsDto } from './credentials.dto';
 
+export type ValidatedCredentials = {
+  accountId: string;
+  authenticatedAt: Date;
+  credentialVersion: number;
+};
+
 @Injectable()
 export class CredentialsService implements OnModuleInit {
   private dummyHash?: string;
@@ -28,9 +34,7 @@ export class CredentialsService implements OnModuleInit {
     }
   }
 
-  async validate(
-    input: CredentialsDto,
-  ): Promise<{ accountId: string; authenticatedAt: Date }> {
+  async validate(input: CredentialsDto): Promise<ValidatedCredentials> {
     const dummyHash = this.dummyHash;
 
     if (!dummyHash) {
@@ -48,6 +52,7 @@ export class CredentialsService implements OnModuleInit {
         select: {
           id: true,
           passwordHash: true,
+          credentialVersion: true,
           status: true,
           emailVerifiedAt: true,
         },
@@ -73,9 +78,17 @@ export class CredentialsService implements OnModuleInit {
       });
     }
 
+    if (
+      !Number.isSafeInteger(account.credentialVersion) ||
+      account.credentialVersion < 1
+    ) {
+      throw this.unavailable();
+    }
+
     return {
       accountId: account.id,
       authenticatedAt: new Date(),
+      credentialVersion: account.credentialVersion,
     };
   }
 

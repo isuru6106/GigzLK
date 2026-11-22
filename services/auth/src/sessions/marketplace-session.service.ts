@@ -11,17 +11,19 @@ type LockedAccount = {
   id: string;
   status: string;
   emailVerifiedAt: Date | null;
+  credentialVersion: number;
 };
 
 @Injectable()
 export class MarketplaceSessionService {
   constructor(private readonly database: DatabaseService) {}
 
-  // Both arguments must come from successful credential validation.
+  // All arguments must come from successful credential validation.
   // Never accept them directly from browser input.
   async createForAccount(
     accountId: string,
     authenticatedAt: Date,
+    credentialVersion: number,
   ): Promise<{
     sessionId: string;
     audience: 'marketplace';
@@ -34,9 +36,11 @@ export class MarketplaceSessionService {
       if (
         !Number.isSafeInteger(authenticatedAtMs) ||
         authenticatedAtMs < 0 ||
-        authenticatedAtMs > Date.now()
+        authenticatedAtMs > Date.now() ||
+        !Number.isSafeInteger(credentialVersion) ||
+        credentialVersion < 1
       ) {
-        throw new Error('Invalid authentication time.');
+        throw new Error('Invalid credential validation result.');
       }
 
       // Copy before awaiting database work to avoid caller mutation.
@@ -44,7 +48,7 @@ export class MarketplaceSessionService {
 
       return await this.database.client.$transaction(async (transaction) => {
         const accounts = await transaction.$queryRaw<LockedAccount[]>`
-          SELECT "id", "status", "emailVerifiedAt"
+          SELECT "id", "status", "emailVerifiedAt", "credentialVersion"
           FROM "Account"
           WHERE "id" = ${accountId}::uuid
           FOR UPDATE
@@ -55,7 +59,8 @@ export class MarketplaceSessionService {
         if (
           !account ||
           account.status !== 'ACTIVE' ||
-          account.emailVerifiedAt === null
+          account.emailVerifiedAt === null ||
+          account.credentialVersion !== credentialVersion
         ) {
           throw new UnauthorizedException({
             code: 'INVALID_CREDENTIALS',
