@@ -1,7 +1,4 @@
-import {
-  ServiceUnavailableException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { DatabaseService } from '../database.service';
 import { CredentialsService } from './credentials.service';
@@ -9,6 +6,7 @@ import { CredentialsService } from './credentials.service';
 type Account = {
   id: string;
   passwordHash: string;
+  credentialVersion: number;
   status: 'ACTIVE' | 'PENDING_VERIFICATION' | 'DISABLED';
   emailVerifiedAt: Date | null;
 };
@@ -22,6 +20,7 @@ describe('CredentialsService', () => {
         select: {
           id: boolean;
           passwordHash: boolean;
+          credentialVersion: boolean;
           status: boolean;
           emailVerifiedAt: boolean;
         };
@@ -48,6 +47,7 @@ describe('CredentialsService', () => {
         timeCost: 2,
         parallelism: 1,
       }),
+      credentialVersion: 7,
       status: 'ACTIVE',
       emailVerifiedAt: new Date(),
     };
@@ -59,23 +59,21 @@ describe('CredentialsService', () => {
   });
 
   async function expectInvalid(candidate: string = password) {
-    try {
-      await service.validate({
+    await expect(
+      service.validate({
         email: 'worker@example.com',
         password: candidate,
-      });
-
-      throw new Error('Expected rejection');
-    } catch (error) {
-      expect(error).toBeInstanceOf(UnauthorizedException);
-      expect((error as UnauthorizedException).getResponse()).toEqual({
+      }),
+    ).rejects.toMatchObject({
+      response: {
         code: 'INVALID_CREDENTIALS',
         message: 'Invalid email or password.',
-      });
-    }
+      },
+      status: 401,
+    });
   }
 
-  it('returns only account ID and the successful authentication time', async () => {
+  it('returns only account ID, authentication time and credential version', async () => {
     const before = Date.now();
 
     const result = await service.validate({
@@ -88,8 +86,10 @@ describe('CredentialsService', () => {
     expect(Object.keys(result).sort()).toEqual([
       'accountId',
       'authenticatedAt',
+      'credentialVersion',
     ]);
     expect(result.accountId).toBe(active.id);
+    expect(result.credentialVersion).toBe(7);
     expect(result.authenticatedAt).toBeInstanceOf(Date);
 
     expect(result.authenticatedAt.getTime()).toBeGreaterThanOrEqual(before);
@@ -100,10 +100,26 @@ describe('CredentialsService', () => {
       select: {
         id: true,
         passwordHash: true,
+        credentialVersion: true,
         status: true,
         emailVerifiedAt: true,
       },
     });
+  });
+
+  it('returns the version associated with the verified password hash', async () => {
+    findUnique.mockResolvedValue({
+      ...active,
+      credentialVersion: 12,
+    });
+
+    const result = await service.validate({
+      email: 'worker@example.com',
+      password,
+    });
+
+    expect(result.credentialVersion).toBe(12);
+    expect(findUnique).toHaveBeenCalledTimes(1);
   });
 
   it('captures authentication time after password verification completes', async () => {
@@ -152,12 +168,30 @@ describe('CredentialsService', () => {
       const result = await pending;
 
       expect(result.authenticatedAt).toEqual(completionTime);
+      expect(result.credentialVersion).toBe(7);
       expect(verify).toHaveBeenCalledTimes(1);
     } finally {
       jest.useRealTimers();
       verify.mockRestore();
     }
   });
+
+  it.each([0, -1, 1.5, NaN, Infinity])(
+    'rejects an invalid stored credential version: %p',
+    async (credentialVersion) => {
+      findUnique.mockResolvedValue({
+        ...active,
+        credentialVersion,
+      });
+
+      await expect(
+        service.validate({
+          email: 'worker@example.com',
+          password,
+        }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    },
+  );
 
   it('rejects an incorrect password', async () => {
     await expectInvalid('wrong-password');

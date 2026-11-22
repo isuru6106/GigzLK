@@ -8,6 +8,7 @@ import { MarketplaceSessionService } from './marketplace-session.service';
 describe('MarketplaceSessionService', () => {
   const accountId = 'b5718a95-f11f-4cfe-91dc-55d595af8dbc';
   const sessionId = 'ddce7093-c348-401a-a59e-1493fcbebdeb';
+  const credentialVersion = 7;
   const authenticatedAt = new Date('2026-11-19T10:00:00.000Z');
   const sessionExpiresAt = new Date('2026-11-26T10:00:00.000Z');
 
@@ -39,6 +40,7 @@ describe('MarketplaceSessionService', () => {
         id: accountId,
         status: 'ACTIVE',
         emailVerifiedAt: new Date('2026-11-18T10:00:00.000Z'),
+        credentialVersion,
       },
     ];
   }
@@ -65,7 +67,7 @@ describe('MarketplaceSessionService', () => {
 
   it('persists authentication time and a seven-day absolute deadline', async () => {
     await expect(
-      service.createForAccount(accountId, authenticatedAt),
+      service.createForAccount(accountId, authenticatedAt, credentialVersion),
     ).resolves.toEqual({
       sessionId,
       audience: 'marketplace',
@@ -96,6 +98,7 @@ describe('MarketplaceSessionService', () => {
           id: accountId,
           status: 'PENDING_VERIFICATION',
           emailVerifiedAt: null,
+          credentialVersion,
         },
       ],
     ],
@@ -105,23 +108,97 @@ describe('MarketplaceSessionService', () => {
         {
           id: accountId,
           status: 'DISABLED',
-          emailVerifiedAt: new Date(),
+          emailVerifiedAt: new Date('2026-11-18T10:00:00.000Z'),
+          credentialVersion,
         },
       ],
     ],
     [
       'active account without verified email',
-      [{ id: accountId, status: 'ACTIVE', emailVerifiedAt: null }],
+      [
+        {
+          id: accountId,
+          status: 'ACTIVE',
+          emailVerifiedAt: null,
+          credentialVersion,
+        },
+      ],
     ],
   ])('rejects %s without creating a session', async (_label, accounts) => {
     queryRaw.mockResolvedValue(accounts);
 
     await expect(
-      service.createForAccount(accountId, authenticatedAt),
+      service.createForAccount(accountId, authenticatedAt, credentialVersion),
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
     expect(create).not.toHaveBeenCalled();
   });
+
+  it('rejects credentials whose version changed before session creation', async () => {
+    queryRaw.mockResolvedValue([
+      {
+        ...eligibleAccounts()[0],
+        credentialVersion: credentialVersion + 1,
+      },
+    ]);
+
+    await expect(
+      service.createForAccount(accountId, authenticatedAt, credentialVersion),
+    ).rejects.toMatchObject({
+      response: {
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password.',
+      },
+      status: 401,
+    });
+
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('checks the version returned after the account lookup completes', async () => {
+    let completeLookup!: (accounts: unknown[]) => void;
+
+    queryRaw.mockReturnValueOnce(
+      new Promise<unknown[]>((resolve) => {
+        completeLookup = resolve;
+      }),
+    );
+
+    const pending = service.createForAccount(
+      accountId,
+      authenticatedAt,
+      credentialVersion,
+    );
+
+    const rejection = expect(pending).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+
+    expect(create).not.toHaveBeenCalled();
+
+    completeLookup([
+      {
+        ...eligibleAccounts()[0],
+        credentialVersion: credentialVersion + 1,
+      },
+    ]);
+
+    await rejection;
+
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it.each([0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])(
+    'rejects an invalid credential version before database work: %p',
+    async (version) => {
+      await expect(
+        service.createForAccount(accountId, authenticatedAt, version),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+      expect(transaction).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
 
   it('does not create a session before the eligibility lookup completes', async () => {
     let completeLookup!: (accounts: unknown[]) => void;
@@ -132,7 +209,11 @@ describe('MarketplaceSessionService', () => {
       }),
     );
 
-    const pending = service.createForAccount(accountId, authenticatedAt);
+    const pending = service.createForAccount(
+      accountId,
+      authenticatedAt,
+      credentialVersion,
+    );
 
     expect(create).not.toHaveBeenCalled();
 
@@ -151,7 +232,11 @@ describe('MarketplaceSessionService', () => {
       return Promise.resolve(eligibleAccounts());
     });
 
-    await service.createForAccount(accountId, authenticatedAt);
+    await service.createForAccount(
+      accountId,
+      authenticatedAt,
+      credentialVersion,
+    );
 
     expect(create).toHaveBeenCalledWith({
       data: {
@@ -174,7 +259,7 @@ describe('MarketplaceSessionService', () => {
     ['future date', new Date('2026-11-19T10:00:00.001Z')],
   ])('rejects an authentication time with %s', async (_label, value) => {
     await expect(
-      service.createForAccount(accountId, value),
+      service.createForAccount(accountId, value, credentialVersion),
     ).rejects.toMatchObject({
       response: {
         code: 'AUTH_UNAVAILABLE',
@@ -190,7 +275,7 @@ describe('MarketplaceSessionService', () => {
     jest.setSystemTime(sessionExpiresAt);
 
     await expect(
-      service.createForAccount(accountId, authenticatedAt),
+      service.createForAccount(accountId, authenticatedAt, credentialVersion),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
 
     expect(create).not.toHaveBeenCalled();
@@ -203,7 +288,7 @@ describe('MarketplaceSessionService', () => {
     });
 
     await expect(
-      service.createForAccount(accountId, authenticatedAt),
+      service.createForAccount(accountId, authenticatedAt, credentialVersion),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
 
     expect(create).not.toHaveBeenCalled();
@@ -217,7 +302,7 @@ describe('MarketplaceSessionService', () => {
       return Promise.resolve(eligibleAccounts());
     });
 
-    await service.createForAccount(accountId, suppliedTime);
+    await service.createForAccount(accountId, suppliedTime, credentialVersion);
 
     expect(create).toHaveBeenCalledWith({
       data: {
@@ -238,7 +323,7 @@ describe('MarketplaceSessionService', () => {
     queryRaw.mockRejectedValue(new Error('PRIVATE_DATABASE_DETAILS'));
 
     await expect(
-      service.createForAccount(accountId, authenticatedAt),
+      service.createForAccount(accountId, authenticatedAt, credentialVersion),
     ).rejects.toMatchObject({
       response: {
         code: 'AUTH_UNAVAILABLE',
@@ -253,7 +338,7 @@ describe('MarketplaceSessionService', () => {
     create.mockRejectedValue(new Error('PRIVATE_INSERT_DETAILS'));
 
     await expect(
-      service.createForAccount(accountId, authenticatedAt),
+      service.createForAccount(accountId, authenticatedAt, credentialVersion),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });

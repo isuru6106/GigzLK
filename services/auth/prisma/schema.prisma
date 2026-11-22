@@ -23,6 +23,7 @@ model Account {
   email              String                   @db.VarChar(254)
   emailNormalized    String                   @unique @db.VarChar(254)
   passwordHash       String                   @db.Text
+  credentialVersion  Int                      @default(1)
   status             AccountStatus            @default(PENDING_VERIFICATION)
   emailVerifiedAt    DateTime?                @db.Timestamptz(3)
   createdAt          DateTime                 @default(now()) @db.Timestamptz(3)
