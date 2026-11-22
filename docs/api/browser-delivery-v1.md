@@ -408,18 +408,30 @@ logout-all or password-change revocation.
 
 ### Proposed expiry and retention
 
+All limits below remain proposals requiring joint review.
+
 | Record | Proposed expiry / retention | Owner to confirm |
 | --- | --- | --- |
 | Anonymous login context | 30-minute absolute login eligibility; recovery binding handled separately | Members 1/2 |
 | Auth attempt | Five-minute issuance eligibility; fixed 24-hour metadata/recovery window from admission | Members 2/4 |
-| Authenticated BFF context | No later than linked Auth session absolute deadline; no sliding extension | Members 1/2 |
-| Recoverable credentials | Usable only while context and credential deadlines permit; delete when fenced, subject to explicitly defined reconciliation needs | Members 1/4 |
-| Disabled-context tombstone | Through latest possible associated session/cookie expiry, plus proposed 24-hour margin | Members 1/4 |
+| Authenticated BFF context | No later than the linked Auth session's absolute deadline; no sliding extension | Members 1/2 |
+| Recoverable credentials | Usable only while context and credential deadlines permit. Delete atomically with BFF fencing/disabling, conditional on the reviewed reference-based Auth cancellation/revocation contract described below. | Members 1/4 |
+| Disabled-context tombstone | Through the latest possible associated session/cookie expiry, plus a proposed 24-hour margin | Members 1/4 |
 | Unresolved reconciliation | Escalate after 24 hours; do not automatically delete unresolved work or lift fences | Members 2/4 |
 
-Credential deletion timing needs a precise rule. The tombstone margin
-requires validation against cookie lifetimes, delayed delivery and restore
-behavior. Neither is an implemented guarantee.
+The earlier credential-retention wording, "subject to reconciliation
+needs", is superseded by the conditional atomic-deletion rule in
+"Proposed cookie expiry and credential deletion clarification".
+It does not authorize indefinite retention or raw credentials in
+reconciliation records.
+
+The cancellation/revocation contract and deletion rule remain proposed,
+not implemented guarantees. Auth must independently validate the BFF's
+authority over the referenced audience and attempt/session. A reference
+alone grants no authority.
+
+The proposed tombstone margin requires validation against cookie
+lifetimes, delayed delivery and restore behavior.
 
 Anonymous login eligibility must not silently shorten the separate
 recovery window. The mechanism for preserving that binding remains OPEN.
