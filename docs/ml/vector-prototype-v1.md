@@ -98,8 +98,8 @@ Similarity values are not suitability scores, probabilities or eligibility.
 
 ## Remaining work
 
-- Physical removal of withdrawn embeddings.
-- Versioned update/deletion handling and stale-event protection.
+- Connect versioned updates and embedding removal to an authorized ingestion path.
+- Agree live revision ordering, tombstone retention and reconciliation contracts.
 - Concurrent indexing/update and failure tests.
 - Automated duplicate-count assertions for repeat indexing.
 - Broader fixtures and relevance evaluation against a simple baseline.
@@ -111,3 +111,50 @@ Similarity values are not suitability scores, probabilities or eligibility.
 
 Synthetic visibility flags do not establish live authorization.
 Backend services remain authoritative for applications, offers and assignment.
+
+## Synthetic source update handling
+
+Implemented in ml-service/scripts/vector_source_updates.py.
+
+- Creates records, including deletion-first tombstones.
+- Recognizes identical duplicate revisions.
+- Rejects equal revisions containing different data.
+- Ignores older revisions.
+- Deletes embeddings for every model before applying a newer revision.
+- Removes searchable text on hidden, unknown and deleted updates.
+- Prevents deleted synthetic identities from being restored.
+- Updates source state and deletes embeddings in one transaction.
+
+A newer visible revision requires re-embedding before retrieval.
+
+Run from the repository root:
+
+```powershell
+$vectorPython = ".\ml-service\.venv-vector\Scripts\python.exe"
+
+& $vectorPython .\ml-service\scripts\check-vector-source-updates.py
+if ($LASTEXITCODE -ne 0) { throw "Source-update checks failed." }
+
+& $vectorPython .\ml-service\scripts\check-vector-source-concurrency.py
+if ($LASTEXITCODE -ne 0) { throw "Concurrency checks failed." }
+```
+
+Recorded local verification:
+
+- Duplicate, conflicting and stale revisions behaved as specified.
+- Newer updates invalidated stored embeddings.
+- Withdrawal removed searchable text and embeddings.
+- Transaction rollback restored source state and embeddings together.
+- Deletion-first delivery and resurrection rejection passed.
+- Three consecutive independent-connection concurrency runs passed.
+
+Concurrency testing exposed an unhandled secondary unique-constraint
+conflict. The initial insert now uses ON CONFLICT DO NOTHING across
+applicable unique constraints before locked revision comparison.
+
+These runs do not exhaust every possible interleaving.
+Indexer-versus-withdrawal races remain unverified.
+
+The helper is not connected to an ingestion API or Kafka consumer.
+Direct table writes can bypass its update rules. Live source revisions,
+authorization, tombstone retention and reconciliation remain pending.
