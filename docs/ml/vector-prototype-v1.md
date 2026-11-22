@@ -158,3 +158,34 @@ Indexer-versus-withdrawal races remain unverified.
 The helper is not connected to an ingestion API or Kafka consumer.
 Direct table writes can bypass its update rules. Live source revisions,
 authorization, tombstone retention and reconciliation remain pending.
+
+## Transactional publication and withdrawal checks
+
+The synthetic demo uses the shared vector_publication.py helper.
+Embedding generation occurs before the publication transaction.
+
+Publication locks source rows in a consistent order and verifies each
+source revision, text and visibility against its encoded snapshot.
+A changed snapshot rolls back the complete batch, including any new
+model registration.
+
+Verified locally using independent PostgreSQL connections and observed
+database blocking:
+- Hidden, unknown and deleted updates committing first reject publication
+  of the old snapshot.
+- Publication committing first allows the subsequent withdrawal to
+  remove its embedding.
+- A newer source revision prevents stale publication.
+- A failed batch leaves no partially published embeddings or new model
+  registration.
+
+Run from the repository root:
+
+    .\ml-service\.venv-vector\Scripts\python.exe -u .\ml-service\scripts\check-vector-publication-races.py
+
+The checks use synthetic numerical vectors and temporary records.
+They do not measure embedding quality. Temporary records are removed
+after the checks.
+
+Direct table writes can bypass these helpers. Live source contracts,
+ingestion, authorization and frontend integration remain pending.

@@ -5,24 +5,15 @@ import re
 from getpass import getpass
 from pathlib import Path
 
-import numpy as np
 import psycopg
 from sentence_transformers import SentenceTransformer
+
+from vector_publication import publish_embeddings, vector_literal
 
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_NAME = "intfloat/multilingual-e5-small"
 PREPROCESSING = "e5-prefix-normalized-v1"
-
-
-def vector_literal(vector: np.ndarray) -> str:
-    if vector.shape != (384,) or not np.isfinite(vector).all():
-        raise RuntimeError("Invalid embedding.")
-
-    if not np.isclose(np.linalg.norm(vector), 1.0, atol=1e-5):
-        raise RuntimeError("Embedding is not normalized.")
-
-    return "[" + ",".join(str(float(value)) for value in vector) + "]"
 
 
 def search_candidates(connection, kind, model_version, query):
@@ -95,7 +86,7 @@ def main() -> None:
         if identity != ("gigzlk_vector_client", "gigzlk_vector_dev"):
             raise RuntimeError("Unexpected database identity.")
 
-        # No database transaction remains open during model execution.
+        # Autocommit keeps model execution outside a database transaction.
         rows = connection.execute(
             """
             SELECT entity_kind, entity_id, source_revision, searchable_text
@@ -131,79 +122,21 @@ def main() -> None:
         if embeddings.shape != (len(rows), 384):
             raise RuntimeError("Unexpected embedding batch shape.")
 
-        # Publish only if each source still matches its encoded snapshot.
-        with connection.transaction():
-            connection.execute(
-                """
-                INSERT INTO ml.embedding_models (
-                    model_version,
-                    model_name,
-                    model_revision,
-                    dimensions,
-                    preprocessing_version
-                )
-                VALUES (%s, %s, %s, 384, %s)
-                ON CONFLICT (model_version) DO NOTHING
-                """,
-                (model_version, MODEL_NAME, revision, PREPROCESSING),
-            )
+        # The helper revalidates and locks sources before publication.
+        # Any changed snapshot causes the entire publication to roll back.
+        published = publish_embeddings(
+            connection,
+            rows=rows,
+            embeddings=embeddings,
+            model_version=model_version,
+            model_name=MODEL_NAME,
+            model_revision=revision,
+            preprocessing_version=PREPROCESSING,
+        )
 
-            registered = connection.execute(
-                """
-                SELECT model_name, model_revision,
-                       dimensions, preprocessing_version
-                FROM ml.embedding_models
-                WHERE model_version = %s
-                FOR SHARE
-                """,
-                (model_version,),
-            ).fetchone()
-
-            if registered != (MODEL_NAME, revision, 384, PREPROCESSING):
-                raise RuntimeError("Existing model registration differs.")
-
-            for row, embedding in zip(rows, embeddings, strict=True):
-                kind, entity_id, source_revision, text = row
-
-                current = connection.execute(
-                    """
-                    SELECT source_revision, searchable_text, visibility
-                    FROM ml.synthetic_entities
-                    WHERE entity_kind = %s AND entity_id = %s
-                    FOR UPDATE
-                    """,
-                    (kind, entity_id),
-                ).fetchone()
-
-                if current != (source_revision, text, "visible"):
-                    raise RuntimeError("Source changed; indexing rolled back.")
-
-                connection.execute(
-                    """
-                    INSERT INTO ml.synthetic_embeddings (
-                        entity_kind,
-                        entity_id,
-                        source_revision,
-                        model_version,
-                        embedding
-                    )
-                    VALUES (%s, %s, %s, %s, %s::public.vector)
-                    ON CONFLICT (entity_kind, entity_id, model_version)
-                    DO UPDATE SET
-                        source_revision = EXCLUDED.source_revision,
-                        embedding = EXCLUDED.embedding,
-                        embedded_at = CURRENT_TIMESTAMP
-                    """,
-                    (
-                        kind,
-                        entity_id,
-                        source_revision,
-                        model_version,
-                        vector_literal(embedding),
-                    ),
-                )
-
-        print(f"Stored embeddings for {len(rows)} visible synthetic records.")
+        print(
+            f"Stored embeddings for {published} visible synthetic records."
+        )
 
         examples = [
             ("worker", "Someone to prepare drinks and serve cafe customers"),
