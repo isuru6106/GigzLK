@@ -32,6 +32,12 @@ export class AuthSessionRecoveryService {
   ): Promise<{ status: 'CANCELLED' }> {
     this.validateInput(authority, attemptId);
 
+    const verifiedAuthority: AuthRecoveryAuthority = {
+      callerIssuer: authority.callerIssuer,
+      audience: authority.audience,
+      contextBinding: authority.contextBinding,
+    };
+
     try {
       return await this.database.client.$transaction(async (transaction) => {
         const attempts = await transaction.$queryRaw<LockedAttempt[]>`
@@ -48,7 +54,7 @@ export class AuthSessionRecoveryService {
 
         const attempt = attempts[0];
 
-        if (!this.isAuthorized(attempt, authority)) {
+        if (!this.isAuthorized(attempt, verifiedAuthority)) {
           throw this.unresolved();
         }
 
@@ -62,7 +68,7 @@ export class AuthSessionRecoveryService {
 
         // Inconsistent associations must not produce a success response.
         if (
-          (session && session.audience !== authority.audience) ||
+          (session && session.audience !== verifiedAuthority.audience) ||
           (attempt.state === 'COMMITTED' && !session)
         ) {
           throw new Error('Inconsistent attempt/session association.');
@@ -85,7 +91,7 @@ export class AuthSessionRecoveryService {
             where: {
               id: session.id,
               loginAttemptId: attemptId,
-              audience: authority.audience,
+              audience: verifiedAuthority.audience,
               revokedAt: null,
             },
             data: { revokedAt: new Date() },
@@ -119,6 +125,12 @@ export class AuthSessionRecoveryService {
   ): Promise<{ status: 'REVOKED' }> {
     this.validateInput(authority, sessionId);
 
+    const verifiedAuthority: AuthRecoveryAuthority = {
+      callerIssuer: authority.callerIssuer,
+      audience: authority.audience,
+      contextBinding: authority.contextBinding,
+    };
+
     try {
       return await this.database.client.$transaction(async (transaction) => {
         const association = await transaction.authSession.findUnique({
@@ -149,7 +161,7 @@ export class AuthSessionRecoveryService {
 
         const attempt = attempts[0];
 
-        if (!this.isAuthorized(attempt, authority)) {
+        if (!this.isAuthorized(attempt, verifiedAuthority)) {
           throw this.unresolved();
         }
 
@@ -164,7 +176,7 @@ export class AuthSessionRecoveryService {
         if (
           !session ||
           session.loginAttemptId !== attemptId ||
-          session.audience !== authority.audience
+          session.audience !== verifiedAuthority.audience
         ) {
           throw this.unresolved();
         }
@@ -177,7 +189,7 @@ export class AuthSessionRecoveryService {
           where: {
             id: sessionId,
             loginAttemptId: attemptId,
-            audience: authority.audience,
+            audience: verifiedAuthority.audience,
             revokedAt: null,
           },
           data: { revokedAt: new Date() },

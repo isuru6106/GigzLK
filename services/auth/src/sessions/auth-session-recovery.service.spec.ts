@@ -247,7 +247,7 @@ describe('AuthSessionRecoveryService', () => {
   it.each([
     ['unknown session', null],
     ['legacy session', { loginAttemptId: null }],
-  ])('leaves an %s unresolved', async (_label, association) => {
+  ])('leaves %s unresolved', async (_label, association) => {
     findSession.mockResolvedValue(association);
 
     await expect(
@@ -285,6 +285,84 @@ describe('AuthSessionRecoveryService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
 
     expect(updateSessions).not.toHaveBeenCalled();
+  });
+
+  it('snapshots cancellation authority before awaiting the attempt lock', async () => {
+    const supplied: AuthRecoveryAuthority = { ...authority };
+
+    let completeLookup!: (rows: ReturnType<typeof attempt>[]) => void;
+
+    queryRaw.mockImplementationOnce(
+      () =>
+        new Promise<ReturnType<typeof attempt>[]>((resolve) => {
+          completeLookup = resolve;
+        }),
+    );
+
+    findSession.mockResolvedValue({
+      id: sessionId,
+      audience: 'MARKETPLACE',
+    });
+
+    const pending = service.cancelAttempt(supplied, attemptId);
+
+    supplied.callerIssuer = 'urn:gigzlk:test:changed-bff';
+    supplied.contextBinding = 'changed-context';
+
+    completeLookup([attempt('COMMITTED')]);
+
+    await expect(pending).resolves.toEqual({ status: 'CANCELLED' });
+
+    expect(updateSessions).toHaveBeenCalledWith({
+      where: {
+        id: sessionId,
+        loginAttemptId: attemptId,
+        audience: 'MARKETPLACE',
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    });
+
+    expect(updateAttempt).toHaveBeenCalledTimes(1);
+  });
+
+  it('snapshots revocation authority before awaiting the session lookup', async () => {
+    const supplied: AuthRecoveryAuthority = { ...authority };
+
+    let completeLookup!: (association: { loginAttemptId: string }) => void;
+
+    findSession
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ loginAttemptId: string }>((resolve) => {
+            completeLookup = resolve;
+          }),
+      )
+      .mockResolvedValueOnce({
+        loginAttemptId: attemptId,
+        audience: 'MARKETPLACE',
+      });
+
+    queryRaw.mockResolvedValue([attempt('COMMITTED')]);
+
+    const pending = service.revokeSession(supplied, sessionId);
+
+    supplied.callerIssuer = 'urn:gigzlk:test:changed-bff';
+    supplied.contextBinding = 'changed-context';
+
+    completeLookup({ loginAttemptId: attemptId });
+
+    await expect(pending).resolves.toEqual({ status: 'REVOKED' });
+
+    expect(updateSessions).toHaveBeenCalledWith({
+      where: {
+        id: sessionId,
+        loginAttemptId: attemptId,
+        audience: 'MARKETPLACE',
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    });
   });
 
   it('does not report success before transaction completion', async () => {
