@@ -1,0 +1,8 @@
+{
+  "model_name": "intfloat/multilingual-e5-small",
+  "dimensions": 384,
+  "preprocessing_version": "e5-prefix-normalized-v1",
+  "max_sequence_length": 512,
+  "normalize_embeddings": true,
+  "model_revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3"
+}
