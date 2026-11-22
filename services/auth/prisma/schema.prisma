@@ -26,6 +26,13 @@ enum AuthLoginAttemptState {
   EXPIRED
 }
 
+enum AuthAdmissionReservationState {
+  RESERVED
+  CONSUMED
+  CANCELLED
+  EXPIRED
+}
+
 model Account {
   id                 String                   @id @default(uuid()) @db.Uuid
   email              String                   @db.VarChar(254)
@@ -65,18 +72,78 @@ model ServiceAssertionReplay {
   @@index([expiresAt])
 }
 
-model AuthLoginAttempt {
-  id                String                @id @default(uuid()) @db.Uuid
-  callerIssuer      String                @db.VarChar(255)
-  audience          SessionAudience
-  contextBinding    String                @db.VarChar(255)
-  state             AuthLoginAttemptState @default(ADMITTED)
-  admittedAt        DateTime              @default(now()) @db.Timestamptz(3)
-  issuanceExpiresAt DateTime              @db.Timestamptz(3)
-  recoveryExpiresAt DateTime              @db.Timestamptz(3)
-  cancelledAt       DateTime?             @db.Timestamptz(3)
+model AuthAdmissionControl {
+  id                String   @id @db.VarChar(32)
+  epoch             String   @db.Uuid
+  enabled           Boolean  @default(false)
+  activeHour        BigInt
+  closedThroughHour BigInt
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+}
 
-  session AuthSession?
+model AuthAdmissionNamespace {
+  id       String    @id @default(uuid()) @db.Uuid
+  epoch    String    @db.Uuid
+  hour     BigInt
+  openedAt DateTime  @db.Timestamptz(3)
+  closedAt DateTime? @db.Timestamptz(3)
+
+  reservations AuthAdmissionReservation[]
+
+  @@unique([epoch, hour])
+}
+
+model AuthAdmissionReservation {
+  id                     String                        @id @default(uuid()) @db.Uuid
+  namespaceId            String                        @db.Uuid
+  attemptComponent       String                        @db.Uuid
+  callerIssuer           String                        @db.VarChar(255)
+  audience               SessionAudience
+  operation              String                        @db.VarChar(128)
+  contextBinding         String                        @db.VarChar(255)
+  authorizationHash      String                        @unique @db.Char(64)
+  state                  AuthAdmissionReservationState @default(RESERVED)
+  createdAt              DateTime                      @db.Timestamptz(3)
+  authorizationExpiresAt DateTime                      @db.Timestamptz(3)
+  issuanceExpiresAt      DateTime                      @db.Timestamptz(3)
+  recoveryExpiresAt      DateTime                      @db.Timestamptz(3)
+  consumedAt             DateTime?                     @db.Timestamptz(3)
+  cancelledAt            DateTime?                     @db.Timestamptz(3)
+  reconciliationPending  Boolean                       @default(false)
+
+  namespace AuthAdmissionNamespace @relation(fields: [namespaceId], references: [id], onDelete: Restrict)
+  attempt   AuthLoginAttempt?
+
+  @@unique([namespaceId, attemptComponent])
+  @@index([callerIssuer, createdAt])
+  @@index([callerIssuer, audience, contextBinding, createdAt])
+  @@index([state, issuanceExpiresAt])
+  @@index([recoveryExpiresAt])
+}
+
+model AuthAdmissionCallerQuota {
+  callerIssuer String   @id @db.VarChar(255)
+  tokens       Float
+  refilledAt   DateTime @db.Timestamptz(3)
+}
+
+model AuthLoginAttempt {
+  id                    String                @id @default(uuid()) @db.Uuid
+  reservationId         String?               @unique @db.Uuid
+  callerIssuer          String                @db.VarChar(255)
+  audience              SessionAudience
+  contextBinding        String                @db.VarChar(255)
+  state                 AuthLoginAttemptState @default(ADMITTED)
+  admittedAt            DateTime              @default(now()) @db.Timestamptz(3)
+  issuanceExpiresAt     DateTime              @db.Timestamptz(3)
+  recoveryExpiresAt     DateTime              @db.Timestamptz(3)
+  cancelledAt           DateTime?             @db.Timestamptz(3)
+  verificationClaimHash String?               @db.Char(64)
+  verificationClaimedAt DateTime?             @db.Timestamptz(3)
+  verificationStartedAt DateTime?             @db.Timestamptz(3)
+
+  reservation AuthAdmissionReservation? @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  session     AuthSession?
 
   @@index([callerIssuer, audience])
   @@index([recoveryExpiresAt])

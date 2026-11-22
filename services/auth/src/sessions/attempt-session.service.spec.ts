@@ -54,6 +54,7 @@ describe('AttemptSessionService', () => {
   function admittedAttempt() {
     return {
       id: attemptId,
+      reservationId: null,
       callerIssuer: authority.callerIssuer,
       audience: 'MARKETPLACE',
       contextBinding: authority.contextBinding,
@@ -142,6 +143,23 @@ describe('AttemptSessionService', () => {
     expect(createSession.mock.invocationCallOrder[0]).toBeLessThan(
       updateAttempt.mock.invocationCallOrder[0],
     );
+  });
+
+  it('rejects reservation-backed attempts before account lookup', async () => {
+    arrangeQueries([
+      {
+        ...admittedAttempt(),
+        reservationId: '44444444-4444-4444-8444-444444444444',
+      },
+    ]);
+
+    await expect(
+      service.createForAttempt(authority, attemptId, credentials),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+    expect(createSession).not.toHaveBeenCalled();
+    expect(updateAttempt).not.toHaveBeenCalled();
   });
 
   it.each(['CANCELLED', 'COMMITTED', 'REJECTED', 'EXPIRED'])(
