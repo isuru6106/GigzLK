@@ -111,10 +111,21 @@ model AuthAdmissionReservation {
   cancelledAt            DateTime?                     @db.Timestamptz(3)
   reconciliationPending  Boolean                       @default(false)
 
+  // Historical BFF custody acknowledgement, not browser receipt.
+  // Encode the BFF-generated 256-bit activation ID as lowercase hex.
+  // This identifier grants no authority.
+  activationId                String?   @db.Char(64)
+  activationAcknowledgedAt    DateTime? @db.Timestamptz(3)
+  activationSessionId         String?   @db.Uuid
+  activationSessionExpiresAt  DateTime? @db.Timestamptz(3)
+  activationConfirmationUntil DateTime? @db.Timestamptz(3)
+
   namespace AuthAdmissionNamespace @relation(fields: [namespaceId], references: [id], onDelete: Restrict)
   attempt   AuthLoginAttempt?
 
+  // The namespace relation also binds the immutable admission epoch.
   @@unique([namespaceId, attemptComponent])
+  @@unique([callerIssuer, namespaceId, activationId])
   @@index([callerIssuer, createdAt])
   @@index([callerIssuer, audience, contextBinding, createdAt])
   @@index([state, issuanceExpiresAt])
