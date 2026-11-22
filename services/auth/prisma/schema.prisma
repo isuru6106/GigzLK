@@ -18,6 +18,14 @@ enum SessionAudience {
   MARKETPLACE
 }
 
+enum AuthLoginAttemptState {
+  ADMITTED
+  COMMITTED
+  CANCELLED
+  REJECTED
+  EXPIRED
+}
+
 model Account {
   id                 String                   @id @default(uuid()) @db.Uuid
   email              String                   @db.VarChar(254)
@@ -57,16 +65,35 @@ model ServiceAssertionReplay {
   @@index([expiresAt])
 }
 
+model AuthLoginAttempt {
+  id                String                @id @default(uuid()) @db.Uuid
+  callerIssuer      String                @db.VarChar(255)
+  audience          SessionAudience
+  contextBinding    String                @db.VarChar(255)
+  state             AuthLoginAttemptState @default(ADMITTED)
+  admittedAt        DateTime              @default(now()) @db.Timestamptz(3)
+  issuanceExpiresAt DateTime              @db.Timestamptz(3)
+  recoveryExpiresAt DateTime              @db.Timestamptz(3)
+  cancelledAt       DateTime?             @db.Timestamptz(3)
+
+  session AuthSession?
+
+  @@index([callerIssuer, audience])
+  @@index([recoveryExpiresAt])
+}
+
 model AuthSession {
   id              String          @id @default(uuid()) @db.Uuid
   accountId       String          @db.Uuid
   audience        SessionAudience
+  loginAttemptId  String?         @unique @db.Uuid
   authenticatedAt DateTime?       @db.Timestamptz(3)
   createdAt       DateTime        @default(now()) @db.Timestamptz(3)
   expiresAt       DateTime        @db.Timestamptz(3)
   revokedAt       DateTime?       @db.Timestamptz(3)
 
-  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account      Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  loginAttempt AuthLoginAttempt? @relation(fields: [loginAttemptId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([accountId, audience])
   @@index([expiresAt])
