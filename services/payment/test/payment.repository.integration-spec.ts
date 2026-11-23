@@ -9,6 +9,7 @@ import { PaymentRepository } from '../src/payments/payment.repository';
 import { PaymentReleaseService } from '../src/payments/payment-release.service';
 import * as releaseJournalFactory from '../src/payments/release-journal';
 import { PaymentApprovalRepository } from '../src/payments/payment-approval.repository';
+import { SimulatedPayoutService } from '../src/payments/simulated-payout.service';
 describe('Payment repository with PostgreSQL', () => {
   let database: DatabaseService;
   let repository: PaymentRepository;
@@ -557,7 +558,10 @@ describe('Payment repository with PostgreSQL', () => {
 
       await expect(
         database.$executeRaw`
-          TRUNCATE TABLE "ReleaseJournal", "LedgerEntry"
+          TRUNCATE TABLE
+            "ReleaseJournal",
+            "LedgerEntry",
+            "SimulatedPayout"
         `,
       ).rejects.toMatchObject(immutableError);
 
@@ -795,6 +799,201 @@ describe('Payment repository with PostgreSQL', () => {
 
       expect((await repository.findById(paymentId))?.approvedAt).toBeInstanceOf(
         Date,
+      );
+    });
+  });
+  it.each(['SUCCEEDED', 'FAILED'] as const)(
+    'records a simulated payout as %s and preserves its retry result',
+    async (outcome) => {
+      await withPayment(async (paymentId) => {
+        await repository.markFunded(paymentId);
+        await repository.markApproved(paymentId);
+
+        const releases = new PaymentReleaseService(database);
+        const journal = await releases.release(
+          paymentId,
+          'test-caller',
+          randomUUID(),
+        );
+
+        const service = new SimulatedPayoutService(database);
+        const key = randomUUID();
+
+        const [first, second] = await Promise.all([
+          service.simulate(paymentId, 'test-caller', key, outcome),
+          service.simulate(paymentId, 'test-caller', key, outcome),
+        ]);
+
+        expect(second).toEqual(first);
+        expect(first).toMatchObject({
+          simulated: true,
+          paymentId,
+          releaseJournalId: journal.id,
+          netMinor: journal.netMinor.toString(),
+          currency: 'LKR',
+          status: outcome,
+        });
+
+        const stored = await database.simulatedPayout.findUniqueOrThrow({
+          where: { paymentId },
+        });
+
+        expect(stored.status).toBe(outcome);
+        expect(stored.netMinor).toBe(journal.netMinor);
+        expect(stored.completedAt).toBeInstanceOf(Date);
+
+        expect(
+          await database.simulatedPayoutRequest.count({
+            where: { callerId: 'test-caller', idempotencyKey: key },
+          }),
+        ).toBe(1);
+
+        const payment = await repository.findById(paymentId);
+        expect(payment?.version).toBe(4);
+
+        const events = await database.outboxEvent.findMany({
+          where: {
+            aggregateId: paymentId,
+            eventType: `SIMULATED_PAYOUT_${outcome}`,
+          },
+        });
+
+        expect(events).toHaveLength(1);
+        expect(events[0].aggregateVersion).toBe(payment?.version);
+        expect(events[0].data).toEqual(first);
+
+        const freshService = new SimulatedPayoutService(database);
+
+        expect(
+          await freshService.simulate(paymentId, 'test-caller', key, outcome),
+        ).toEqual(first);
+
+        expect(
+          await releases.release(
+            paymentId,
+            'test-caller',
+            journal.idempotencyKey,
+          ),
+        ).toEqual(journal);
+      });
+    },
+  );
+
+  it('rejects simulated payout before release', async () => {
+    await withPayment(async (paymentId) => {
+      const before = await repository.findById(paymentId);
+      const service = new SimulatedPayoutService(database);
+
+      await expect(
+        service.simulate(paymentId, 'test-caller', randomUUID(), 'SUCCEEDED'),
+      ).rejects.toThrow('not eligible');
+
+      expect(await repository.findById(paymentId)).toEqual(before);
+      expect(
+        await database.simulatedPayout.count({ where: { paymentId } }),
+      ).toBe(0);
+      expect(
+        await database.simulatedPayoutRequest.count({ where: { paymentId } }),
+      ).toBe(0);
+    });
+  });
+
+  it('rejects changed payout outcomes, payment binding and new terminal requests', async () => {
+    await withPayment(async (paymentId) => {
+      await repository.markFunded(paymentId);
+      await repository.markApproved(paymentId);
+
+      await new PaymentReleaseService(database).release(
+        paymentId,
+        'test-caller',
+        randomUUID(),
+      );
+
+      const service = new SimulatedPayoutService(database);
+      const key = randomUUID();
+
+      await service.simulate(paymentId, 'test-caller', key, 'FAILED');
+
+      await expect(
+        service.simulate(paymentId, 'test-caller', key, 'SUCCEEDED'),
+      ).rejects.toThrow('idempotency conflict');
+
+      await expect(
+        service.simulate(paymentId, 'test-caller', randomUUID(), 'SUCCEEDED'),
+      ).rejects.toThrow('already completed');
+
+      await withPayment(async (otherPaymentId) => {
+        await expect(
+          service.simulate(otherPaymentId, 'test-caller', key, 'FAILED'),
+        ).rejects.toThrow('idempotency conflict');
+      });
+
+      expect(
+        (
+          await database.simulatedPayout.findUniqueOrThrow({
+            where: { paymentId },
+          })
+        ).status,
+      ).toBe('FAILED');
+    });
+  });
+
+  it('rolls back simulated payout when its outbox insert fails', async () => {
+    await withPayment(async (paymentId) => {
+      await repository.markFunded(paymentId);
+      await repository.markApproved(paymentId);
+
+      await new PaymentReleaseService(database).release(
+        paymentId,
+        'test-caller',
+        randomUUID(),
+      );
+
+      const before = await repository.findById(paymentId);
+      const key = randomUUID();
+
+      const failingDatabase = database.$extends({
+        query: {
+          outboxEvent: {
+            create() {
+              throw new Error('Simulated payout outbox failure');
+            },
+          },
+        },
+      });
+
+      const failingService = new SimulatedPayoutService(
+        failingDatabase as unknown as DatabaseService,
+      );
+
+      await expect(
+        failingService.simulate(paymentId, 'test-caller', key, 'SUCCEEDED'),
+      ).rejects.toThrow('Simulated payout outbox failure');
+
+      expect(await repository.findById(paymentId)).toEqual(before);
+
+      expect(
+        await database.simulatedPayout.count({ where: { paymentId } }),
+      ).toBe(0);
+
+      expect(
+        await database.simulatedPayoutRequest.count({ where: { paymentId } }),
+      ).toBe(0);
+
+      expect(
+        await database.outboxEvent.count({
+          where: {
+            aggregateId: paymentId,
+            eventType: 'SIMULATED_PAYOUT_SUCCEEDED',
+          },
+        }),
+      ).toBe(0);
+
+      await new SimulatedPayoutService(database).simulate(
+        paymentId,
+        'test-caller',
+        key,
+        'SUCCEEDED',
       );
     });
   });

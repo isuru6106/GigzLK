@@ -13,18 +13,19 @@ enum Currency {
 }
 
 model Payment {
-  id             String          @id @default(uuid()) @db.Uuid
-  assignmentId   String          @unique @db.Uuid
-  grossMinor     BigInt
-  currency       Currency        @default(LKR)
-  fundedAt       DateTime?       @db.Timestamptz(3)
-  approvedAt     DateTime?       @db.Timestamptz(3)
-  holdActive     Boolean         @default(false)
-  releasedAt     DateTime?       @db.Timestamptz(3)
-  version        Int             @default(0)
-  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
-  releaseJournal ReleaseJournal?
+  id              String           @id @default(uuid()) @db.Uuid
+  assignmentId    String           @unique @db.Uuid
+  grossMinor      BigInt
+  currency        Currency         @default(LKR)
+  fundedAt        DateTime?        @db.Timestamptz(3)
+  approvedAt      DateTime?        @db.Timestamptz(3)
+  holdActive      Boolean          @default(false)
+  releasedAt      DateTime?        @db.Timestamptz(3)
+  version         Int              @default(0)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
+  releaseJournal  ReleaseJournal?
+  simulatedPayout SimulatedPayout?
 }
 
 enum AccountingSide {
@@ -49,8 +50,9 @@ model ReleaseJournal {
   currency        Currency @default(LKR)
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
 
-  payment Payment       @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  entries LedgerEntry[]
+  payment         Payment          @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  entries         LedgerEntry[]
+  simulatedPayout SimulatedPayout?
 
   @@unique([callerId, idempotencyKey])
 }
@@ -99,6 +101,40 @@ model PaymentApprovalRequest {
   paymentId      String   @db.Uuid
   response       Json
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([callerId, idempotencyKey])
+  @@index([paymentId])
+}
+
+enum SimulatedPayoutStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model SimulatedPayout {
+  id               String                @id @default(uuid()) @db.Uuid
+  paymentId        String                @unique @db.Uuid
+  releaseJournalId String                @unique @db.Uuid
+  netMinor         BigInt
+  currency         Currency              @default(LKR)
+  status           SimulatedPayoutStatus @default(PENDING)
+  version          Int                   @default(0)
+  createdAt        DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
+  completedAt      DateTime?             @db.Timestamptz(3)
+  payment          Payment               @relation(fields: [paymentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  releaseJournal   ReleaseJournal        @relation(fields: [releaseJournalId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model SimulatedPayoutRequest {
+  id             String                @id @default(uuid()) @db.Uuid
+  callerId       String                @db.VarChar(100)
+  idempotencyKey String                @db.VarChar(128)
+  paymentId      String                @db.Uuid
+  outcome        SimulatedPayoutStatus
+  response       Json
+  createdAt      DateTime              @default(now()) @db.Timestamptz(3)
 
   @@unique([callerId, idempotencyKey])
   @@index([paymentId])

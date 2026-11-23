@@ -154,3 +154,21 @@ Production Kafka configuration and downstream consumers remain pending.
 
 Read and approval routes exist, but live authorization integration remains
 disconnected. No real money transfer is enabled.
+
+## Internal payout simulator
+
+An internal service can record a simulated SUCCEEDED or FAILED payout
+after payment release. No public payout route or real transfer is enabled.
+
+- The amount and currency come from the recorded release journal.
+- One simulated payout is permitted per payment.
+- Success and failure are terminal in this version.
+- Identical caller-scoped retries return the saved response.
+- Reusing a key with another payment or outcome is rejected.
+- Payout state, retry response and outbox event commit atomically.
+- Events use SIMULATED_PAYOUT_SUCCEEDED or SIMULATED_PAYOUT_FAILED
+  and include simulated: true.
+- Existing release ledger entries remain unchanged.
+
+New attempts after failure, real provider integration and payout
+settlement accounting remain outside this implementation.
