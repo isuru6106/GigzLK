@@ -114,7 +114,7 @@ Synthetic ordering and tombstone rules do not establish a live source contract.
 - [x] Include worker-assessment database verification in vector CI.
 - [x] Merge PR #70 with two checks reported passed.
 
-### 3.4 Retrieved-job assessments — locally verified, PR pending
+### 3.4 Retrieved-job assessments — merged in PR #71
 
 - [x] Implement rules-v1 assessments of retrieved jobs for one worker.
 - [x] Supply relevant experience separately for each candidate job.
@@ -128,12 +128,11 @@ Synthetic ordering and tombstone rules do not establish a live source contract.
 - [x] Pass four PostgreSQL job-assessment integration checks.
 - [x] Verify rollback of temporary sources, vectors and model registrations.
 - [x] Stage the job-assessment workflow and documentation changes.
-- [ ] Commit and push the job-assessment branch.
-- [ ] Open and review the job-assessment PR.
-- [ ] Verify ML service CI and Synthetic vector checks for this change.
-- [ ] Merge the job-assessment PR.
+- [x] Commit and push the job-assessment branch.
+- [x] Open PR #71.
+- [x] Record two checks reported passed for PR #71.
+- [x] Merge the job-assessment implementation through PR #71.
 
-Current branch: feat/member4-job-recommendation-assessments.
 
 ### 3.5 Automated database verification
 
@@ -146,7 +145,7 @@ Current branch: feat/member4-job-recommendation-assessments.
 - [x] Run database checks without PyTorch or model downloads.
 - [x] Verify temporary-record cleanup.
 - [x] Add retrieved-worker assessment to automated database verification.
-- [ ] Verify the newly added retrieved-job assessment in CI.
+- [x] Include retrieved-job assessment in CI; PR #71 reports two passing checks.
 
 ### 3.6 Remaining recommendation delivery
 
@@ -326,13 +325,11 @@ entire feature. Checklist counts are not a weighted completion percentage.
 
 ## Immediate next steps
 
-1. Commit, push and open the current job-assessment PR.
-2. Verify both applicable workflows and complete review before merging.
-3. Expand recommendation fixtures and baseline relevance evaluation.
-4. Define and evaluate suitability filtering and ranking behavior.
-5. Finalize and implement recommendation API contracts.
-6. Connect authorized live sources and frontend when contracts are ready.
-7. Continue survey preparation and real payment-data collection.
+1. Expand recommendation fixtures and baseline relevance evaluation.
+2. Define and evaluate suitability filtering and ranking behavior.
+3. Finalize and implement recommendation API contracts.
+4. Connect authorized live sources and frontend when contracts are ready.
+5. Continue survey preparation and real payment-data collection.
 
 Login issuance, refresh and live integration are not approved by this checklist.
 Their status is governed by the relevant reviewed contracts and implementation.
