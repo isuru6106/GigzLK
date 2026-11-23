@@ -1,0 +1,30 @@
+{
+  "contractVersion": "recommendations-v1",
+  "direction": "WORKERS_FOR_JOB",
+  "subject": {
+    "entityKind": "job",
+    "id": "synthetic-job-mock-cafe",
+    "sourceRevision": "1"
+  },
+  "generatedAt": "2026-11-23T00:00:00Z",
+  "rankingVersion": "semantic-order-v1",
+  "embeddingModelVersion": "e5-small-614241f622f53c4eeff9890bdc4f31cfecc418b3-e5-prefix-normalized-v1",
+  "filterPolicyVersion": "synthetic-known-mismatches-v1",
+  "appliedFilters": {
+    "excludeAvailabilityMismatch": false,
+    "excludeLocationMismatch": false
+  },
+  "freshness": {
+    "status": "NOT_VERIFIED"
+  },
+  "items": [],
+  "warnings": [
+    "SYNTHETIC_DEVELOPMENT_ONLY",
+    "SEMANTIC_SIMILARITY_NOT_SUITABILITY",
+    "RANKING_POLICY_NOT_QUALITY_VALIDATED",
+    "SOURCE_FRESHNESS_NOT_VERIFIED",
+    "CALLER_AUTHORIZATION_NOT_CHECKED",
+    "CANDIDATE_VISIBILITY_NOT_CHECKED",
+    "DOMAIN_ELIGIBILITY_NOT_CHECKED"
+  ]
+}
