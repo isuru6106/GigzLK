@@ -29,4 +29,29 @@ export class PaymentAssignmentClient {
       }),
     );
   }
+  canApprovePayment(accountId: string, assignmentId: string): Promise<boolean> {
+    void accountId;
+    void assignmentId;
+
+    return Promise.reject(
+      new ServiceUnavailableException({
+        code: 'ASSIGNMENT_UNAVAILABLE',
+        message: 'Assignment validation is unavailable',
+      }),
+    );
+  }
+}
+
+@Injectable()
+export class PaymentCompletionClient {
+  isCompleted(assignmentId: string): Promise<boolean> {
+    void assignmentId;
+
+    return Promise.reject(
+      new ServiceUnavailableException({
+        code: 'COMPLETION_UNAVAILABLE',
+        message: 'Completion validation is unavailable',
+      }),
+    );
+  }
 }

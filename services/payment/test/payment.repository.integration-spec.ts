@@ -8,7 +8,7 @@ import { DatabaseService } from '../src/database.service';
 import { PaymentRepository } from '../src/payments/payment.repository';
 import { PaymentReleaseService } from '../src/payments/payment-release.service';
 import * as releaseJournalFactory from '../src/payments/release-journal';
-
+import { PaymentApprovalRepository } from '../src/payments/payment-approval.repository';
 describe('Payment repository with PostgreSQL', () => {
   let database: DatabaseService;
   let repository: PaymentRepository;
@@ -676,5 +676,126 @@ describe('Payment repository with PostgreSQL', () => {
     expect(await service.release(payment.id, 'test-caller', key)).toEqual(
       journal,
     );
+  });
+  it('approves once for concurrent retries and preserves the response', async () => {
+    await withPayment(async (paymentId) => {
+      await repository.markFunded(paymentId);
+
+      const funded = await repository.findById(paymentId);
+
+      if (!funded) {
+        throw new Error('Expected payment fixture');
+      }
+
+      const approvals = new PaymentApprovalRepository(database);
+      const callerId = randomUUID();
+      const key = randomUUID();
+
+      const [first, second] = await Promise.all([
+        approvals.approve(paymentId, callerId, key, funded.version),
+        approvals.approve(paymentId, callerId, key, funded.version),
+      ]);
+
+      expect(second).toEqual(first);
+
+      const approved = await repository.findById(paymentId);
+
+      expect(approved?.approvedAt).toBeInstanceOf(Date);
+      expect(approved?.version).toBe(funded.version + 1);
+
+      expect(
+        await database.paymentApprovalRequest.count({
+          where: { callerId, idempotencyKey: key },
+        }),
+      ).toBe(1);
+
+      // Change current state, then verify retry returns the original snapshot.
+      await repository.setHold(paymentId, true);
+
+      const freshApprovals = new PaymentApprovalRepository(database);
+
+      expect(
+        await freshApprovals.approve(paymentId, callerId, key, funded.version),
+      ).toEqual(first);
+    });
+  });
+
+  it('rejects approval key reuse for another payment', async () => {
+    await withPayment(async (paymentId) => {
+      await repository.markFunded(paymentId);
+
+      const funded = await repository.findById(paymentId);
+
+      if (!funded) {
+        throw new Error('Expected payment fixture');
+      }
+
+      const approvals = new PaymentApprovalRepository(database);
+      const callerId = randomUUID();
+      const key = randomUUID();
+
+      await approvals.approve(paymentId, callerId, key, funded.version);
+
+      await withPayment(async (otherPaymentId) => {
+        await expect(
+          approvals.approve(otherPaymentId, callerId, key, 0),
+        ).rejects.toMatchObject({
+          code: 'IDEMPOTENCY_CONFLICT',
+        });
+
+        expect(
+          (await repository.findById(otherPaymentId))?.approvedAt,
+        ).toBeNull();
+      });
+    });
+  });
+
+  it('rolls back approval when saving the retry record fails', async () => {
+    await withPayment(async (paymentId) => {
+      await repository.markFunded(paymentId);
+
+      const before = await repository.findById(paymentId);
+
+      if (!before) {
+        throw new Error('Expected payment fixture');
+      }
+
+      const callerId = randomUUID();
+      const key = randomUUID();
+
+      const failingDatabase = database.$extends({
+        query: {
+          paymentApprovalRequest: {
+            create() {
+              throw new Error('Simulated approval record failure');
+            },
+          },
+        },
+      });
+
+      const approvals = new PaymentApprovalRepository(
+        failingDatabase as unknown as DatabaseService,
+      );
+
+      await expect(
+        approvals.approve(paymentId, callerId, key, before.version),
+      ).rejects.toThrow('Simulated approval record failure');
+
+      expect(await repository.findById(paymentId)).toEqual(before);
+
+      expect(
+        await database.paymentApprovalRequest.count({
+          where: { callerId, idempotencyKey: key },
+        }),
+      ).toBe(0);
+
+      const normalApprovals = new PaymentApprovalRepository(database);
+
+      await normalApprovals.approve(paymentId, callerId, key, before.version);
+
+      expect((await repository.findById(paymentId))?.approvedAt).toBeInstanceOf(
+        Date,
+      );
+    });
   });
 });

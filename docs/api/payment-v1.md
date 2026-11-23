@@ -1,6 +1,6 @@
 # Payment API v1
 
-Status: PROPOSED — HTTP implementation and live integration pending
+Status: HTTP read and approval foundation implemented; live authorization integration pending
 Owner: Member 3
 Reviewers: Members 1, 2 and 4
 
@@ -15,6 +15,14 @@ Reviewers: Members 1, 2 and 4
 These internal services do not establish user authorization.
 External funding, refunds and payouts are not implemented.
 
+- Read and approval HTTP routes with authorization dependency checks.
+- Durable caller-scoped approval idempotency and saved response snapshots.
+- Transactional release outbox and a standalone local Kafka publisher.
+- Database protection against ledger updates, deletion, truncation,
+  extra entries and incomplete release journals.
+
+Auth, assignment and completion clients currently fail closed.
+Successful HTTP flows are tested with mocked authorization dependencies.
 ## Proposed public operations
 
 | Method | Path | Purpose |
@@ -121,16 +129,20 @@ Envelope: code, message, requestId.
 | 503 | AUTH_UNAVAILABLE | Required Auth validation unavailable |
 | 503 | ASSIGNMENT_UNAVAILABLE | Required assignment validation unavailable |
 | 503 | PAYMENT_UNAVAILABLE | Payment storage or required dependency unavailable |
-
+| 503 | COMPLETION_UNAVAILABLE | Required Operations completion validation unavailable |
 Service credential failures remain distinct from invalid user sessions.
 Never expose credentials, database errors or provider internals.
 All payment responses, including errors, use Cache-Control: no-store.
 
 ## Events
 
-Release events require a transactional outbox before Kafka integration.
-A database release must not depend on a successful direct Kafka publish.
-Outbox, event schemas and consumers remain to be implemented.
+Release events are saved in a transactional outbox alongside the payment
+release and journal. A standalone local worker publishes them to Kafka.
+
+Publication uses claims, bounded retries and expired-claim recovery.
+Delivery is at least once; consumers must deduplicate by eventId.
+
+Production Kafka configuration and downstream consumers remain pending.
 
 ## Open integration decisions
 
@@ -138,6 +150,7 @@ Outbox, event schemas and consumers remain to be implemented.
 - Member 2: assignment/contract lookup and Payment's permitted Auth caller.
 - Members 2/3: completion proof and assignment revision checks.
 - Member 4: internal credentials, routing, rate limits and deployment.
-- Member 3: durable approval idempotency, outbox and ledger edit protection.
+- Member 3: payout/refund simulation and correction/reversal workflows.
 
-No live financial endpoint is enabled by this draft.
+Read and approval routes exist, but live authorization integration remains
+disconnected. No real money transfer is enabled.

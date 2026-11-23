@@ -91,3 +91,15 @@ model OutboxEvent {
   @@unique([aggregateId, aggregateVersion, eventType])
   @@index([publishedAt, nextAttemptAt, createdAt])
 }
+
+model PaymentApprovalRequest {
+  id             String   @id @default(uuid()) @db.Uuid
+  callerId       String   @db.Uuid
+  idempotencyKey String   @db.VarChar(128)
+  paymentId      String   @db.Uuid
+  response       Json
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([callerId, idempotencyKey])
+  @@index([paymentId])
+}
