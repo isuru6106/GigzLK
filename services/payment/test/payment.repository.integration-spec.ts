@@ -566,4 +566,115 @@ describe('Payment repository with PostgreSQL', () => {
       );
     });
   });
+  it('rejects extra entries on an existing release journal', async () => {
+    await withPayment(async (paymentId) => {
+      await repository.markFunded(paymentId);
+      await repository.markApproved(paymentId);
+
+      const service = new PaymentReleaseService(database);
+      const key = randomUUID();
+      const journal = await service.release(paymentId, 'test-caller', key);
+
+      await expect(
+        database.$executeRaw`
+          INSERT INTO "LedgerEntry" (
+            "id", "journalId", "position", "account",
+            "side", "amountMinor", "currency"
+          )
+          VALUES (
+            ${randomUUID()}::uuid,
+            ${journal.id}::uuid,
+            99,
+            'WORKER_PAYABLE',
+            'CREDIT',
+            1,
+            'LKR'
+          )
+        `,
+      ).rejects.toMatchObject({
+        code: 'P2010',
+        meta: {
+          driverAdapterError: expect.objectContaining({
+            message: 'Release journal entries do not match journal amounts',
+          }),
+        },
+      });
+
+      expect(await service.release(paymentId, 'test-caller', key)).toEqual(
+        journal,
+      );
+    });
+  });
+  it('rejects a journal without accounting entries', async () => {
+    await withPayment(async (paymentId) => {
+      const journalId = randomUUID();
+
+      await expect(
+        database.$executeRaw`
+          INSERT INTO "ReleaseJournal" (
+            "id", "paymentId", "callerId", "idempotencyKey",
+            "grossMinor", "commissionMinor", "netMinor", "currency"
+          )
+          VALUES (
+            ${journalId}::uuid,
+            ${paymentId}::uuid,
+            'test-caller',
+            ${randomUUID()},
+            1000000,
+            100000,
+            900000,
+            'LKR'
+          )
+        `,
+      ).rejects.toMatchObject({
+        code: 'P2010',
+        meta: {
+          driverAdapterError: expect.objectContaining({
+            message: 'Release journal entries do not match journal amounts',
+          }),
+        },
+      });
+
+      expect(
+        await database.releaseJournal.findUnique({
+          where: { id: journalId },
+        }),
+      ).toBeNull();
+    });
+  });
+  it('releases with two entries when commission rounds to zero', async () => {
+    const payment = await repository.createForAssignment(randomUUID(), 4);
+
+    await repository.markFunded(payment.id);
+    await repository.markApproved(payment.id);
+
+    const service = new PaymentReleaseService(database);
+    const key = randomUUID();
+    const journal = await service.release(payment.id, 'test-caller', key);
+
+    expect(journal.grossMinor).toBe(4n);
+    expect(journal.commissionMinor).toBe(0n);
+    expect(journal.netMinor).toBe(4n);
+
+    expect(journal.entries).toMatchObject([
+      {
+        position: 0,
+        account: 'PROTECTED_FUNDS',
+        side: 'DEBIT',
+        amountMinor: 4n,
+        currency: 'LKR',
+      },
+      {
+        position: 1,
+        account: 'WORKER_PAYABLE',
+        side: 'CREDIT',
+        amountMinor: 4n,
+        currency: 'LKR',
+      },
+    ]);
+
+    expect(await service.release(payment.id, 'test-caller', key)).toEqual(
+      journal,
+    );
+  });
 });
