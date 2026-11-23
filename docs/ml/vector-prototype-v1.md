@@ -252,3 +252,37 @@ frontend integration remain pending.
 
 The worker-assessment database check is included in the vector workflow.
 Its automated execution requires a successful Actions run for this change.
+
+## Synthetic retrieved-job assessment
+
+app/synthetic_job_recommendations.py assesses retrieved jobs for one
+worker using the existing rules-v1 matcher.
+
+Relevant experience is supplied separately for each candidate job.
+A shared worker-level experience value is rejected. Unknown experience
+remains unknown; zero means known absence of relevant experience.
+A job requiring no experience can satisfy that factor without a value.
+
+Results preserve semantic ordering, source revisions, model version,
+factor explanations, missing fields and mismatch warnings.
+Similarity and suitability remain separate.
+
+Verification:
+- 42 job-assessment tests passed locally.
+- The complete ML suite passed 143 tests.
+- Four PostgreSQL integration checks passed.
+- Checks verified hidden-job exclusion, preserved retrieval metadata,
+  per-job experience, zero versus unknown values, serialization and
+  unchanged assessment inputs.
+- Temporary sources, embeddings and model registrations were rolled back.
+
+The database check uses explicit structured synthetic fixtures and
+numerical test vectors. It does not verify real-world relevance or
+authoritative experience derivation.
+
+The vector workflow includes check-vector-job-assessment.py.
+Automated execution must be verified by a successful Actions run.
+
+Combined ranking, freshness verification, live source contracts,
+authorization, recommendation HTTP APIs and frontend integration
+remain pending.
