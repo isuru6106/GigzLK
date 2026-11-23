@@ -1,4 +1,4 @@
-"""Check PostgreSQL retrieval followed by synthetic worker assessment."""
+"""Check PostgreSQL worker retrieval, assessment and optional filtering."""
 
 import runpy
 import sys
@@ -16,6 +16,10 @@ from app.synthetic_recommendations import (
     SyntheticWorkerRequest,
     assess_retrieved_workers,
 )
+from app.synthetic_suitability_filters import (
+    SyntheticFilterOptions,
+    filter_assessed_workers,
+)
 from vector_db_credentials import read_vector_password
 from vector_publication import publish_embeddings
 from vector_source_updates import apply_source_update
@@ -28,6 +32,162 @@ search_candidates = demo["search_candidates"]
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
+
+
+def check_filtering(response, mismatch_id):
+    """Check filters using the assessed PostgreSQL retrieval results."""
+    original = response.model_dump(mode="json")
+
+    disabled_options = SyntheticFilterOptions()
+    disabled = filter_assessed_workers(response, disabled_options)
+
+    require(
+        disabled.result.model_dump(mode="json") == original,
+        "Disabled filters changed the assessment response.",
+    )
+    require(
+        disabled.summary.model_dump()
+        == {
+            "input_count": 3,
+            "returned_count": 3,
+            "excluded_count": 0,
+            "excluded_availability_mismatch_count": 0,
+            "excluded_location_mismatch_count": 0,
+        },
+        "Disabled-filter counts are incorrect.",
+    )
+    require(
+        disabled.filters.model_dump() == disabled_options.model_dump(),
+        "Disabled filter options changed.",
+    )
+    print("PASS: disabled filters preserve all retrieved worker assessments.")
+
+    expected_items = [
+        item for item in response.items if item.worker_id != mismatch_id
+    ]
+    require(len(expected_items) == 2, "Unexpected worker filtering fixtures.")
+
+    for availability, location in (
+        (True, False),
+        (False, True),
+        (True, True),
+    ):
+        options = SyntheticFilterOptions(
+            exclude_availability_mismatch=availability,
+            exclude_location_mismatch=location,
+        )
+        options_before = options.model_dump()
+        filtered = filter_assessed_workers(response, options)
+
+        require(
+            filtered.policy_version == "synthetic-known-mismatches-v1",
+            "Unexpected filtering policy.",
+        )
+        require(
+            filtered.filters.model_dump() == options_before
+            and options.model_dump() == options_before,
+            "Filtering changed the supplied options.",
+        )
+        require(
+            filtered.summary.model_dump()
+            == {
+                "input_count": 3,
+                "returned_count": 2,
+                "excluded_count": 1,
+                "excluded_availability_mismatch_count": int(availability),
+                "excluded_location_mismatch_count": int(location),
+            },
+            "Worker exclusion counts are incorrect.",
+        )
+        require(
+            [item.rank for item in filtered.result.items] == [1, 2],
+            "Filtered worker ranks are not consecutive.",
+        )
+
+        for rank, (actual, expected) in enumerate(
+            zip(filtered.result.items, expected_items, strict=True),
+            start=1,
+        ):
+            expected_data = expected.model_dump(mode="json")
+            expected_data["rank"] = rank
+
+            require(
+                actual.model_dump(mode="json") == expected_data,
+                "Filtering changed worker order, metadata or assessments.",
+            )
+
+        require(
+            filtered.result.model_dump(
+                mode="json", exclude={"items", "warnings"}
+            )
+            == response.model_dump(
+                mode="json", exclude={"items", "warnings"}
+            ),
+            "Filtering changed worker response metadata.",
+        )
+        require(
+            set(response.warnings).issubset(filtered.result.warnings)
+            and "SYNTHETIC_FILTERS_NOT_DOMAIN_ELIGIBILITY"
+            in filtered.result.warnings
+            and "FILTERED_RETRIEVED_POOL_NOT_EXHAUSTIVE"
+            in filtered.result.warnings,
+            "Required filtering warnings are missing.",
+        )
+
+        incomplete = filtered.result.items[-1].assessment
+        require(
+            incomplete.assessment_status == "INCOMPLETE"
+            and incomplete.overall_score is None
+            and incomplete.factors.availability.score is None
+            and incomplete.factors.location.score is None,
+            "Unknown worker information was treated as a mismatch.",
+        )
+
+        type(filtered).model_validate_json(filtered.model_dump_json())
+
+    require(
+        response.model_dump(mode="json") == original,
+        "Filtering mutated the original worker response.",
+    )
+    print("PASS: worker filters preserve semantic order, metadata and unknowns.")
+    print("PASS: worker exclusion counts, ranks and serialization are correct.")
+
+    mismatch = next(
+        item for item in response.items if item.worker_id == mismatch_id
+    )
+    mismatch_only = response.model_copy(
+        update={
+            "items": [mismatch.model_copy(update={"rank": 1}, deep=True)]
+        },
+        deep=True,
+    )
+    empty = filter_assessed_workers(
+        mismatch_only,
+        SyntheticFilterOptions(
+            exclude_availability_mismatch=True,
+            exclude_location_mismatch=True,
+        ),
+    )
+
+    require(
+        empty.result.items == []
+        and empty.summary.model_dump()
+        == {
+            "input_count": 1,
+            "returned_count": 0,
+            "excluded_count": 1,
+            "excluded_availability_mismatch_count": 1,
+            "excluded_location_mismatch_count": 1,
+        },
+        "Filtering all workers did not produce the expected empty result.",
+    )
+    type(empty).model_validate_json(empty.model_dump_json())
+
+    require(
+        response.model_dump(mode="json") == original,
+        "Empty-result filtering mutated the original worker response.",
+    )
+    print("PASS: filtering all retrieved workers returns an empty pool.")
 
 
 def main():
@@ -50,7 +210,7 @@ def main():
         "location_id": "synthetic-location-colombo",
     }
 
-    # Explicit test fixtures, not facts inferred from source descriptions.
+    # Explicit synthetic facts, not facts inferred from descriptions.
     workers = {
         worker_ids["complete"]: {
             "worker_id": worker_ids["complete"],
@@ -133,7 +293,6 @@ def main():
                     visibility="visible",
                     searchable_text=text,
                 )
-
                 snapshots.append(("worker", worker_id, 1, text))
 
             publish_embeddings(
@@ -146,7 +305,7 @@ def main():
                 preprocessing_version="synthetic-unit-vector-v1",
             )
 
-            # Deliberately retain this vector to exercise retrieval filtering.
+            # Retain this vector deliberately to exercise visibility filtering.
             connection.execute(
                 """
                 UPDATE ml.synthetic_entities
@@ -155,11 +314,21 @@ def main():
                 """,
                 (worker_ids["hidden"],),
             )
+            retained = connection.execute(
+                """
+                SELECT count(*)
+                FROM ml.synthetic_embeddings
+                WHERE entity_kind = 'worker'
+                  AND entity_id = %s
+                  AND model_version = %s
+                """,
+                (worker_ids["hidden"], model_version),
+            ).fetchone()[0]
+            require(retained == 1, "Hidden worker vector was not retained.")
 
             retrieved = search_candidates(
                 connection, "worker", model_version, query
             )
-
             expected_ids = [
                 worker_ids["complete"],
                 worker_ids["mismatch"],
@@ -186,17 +355,21 @@ def main():
                     }
                 )
 
-            response = assess_retrieved_workers(
-                SyntheticWorkerRequest.model_validate(
-                    {
-                        "job": job,
-                        "job_source_revision": 1,
-                        "embedding_model_version": model_version,
-                        "candidates": candidates,
-                    }
-                )
+            request = SyntheticWorkerRequest.model_validate(
+                {
+                    "job": job,
+                    "job_source_revision": 1,
+                    "embedding_model_version": model_version,
+                    "candidates": candidates,
+                }
             )
+            request_before = request.model_dump(mode="json")
+            response = assess_retrieved_workers(request)
 
+            require(
+                request.model_dump(mode="json") == request_before,
+                "Assessment mutated the supplied worker fixtures.",
+            )
             require(
                 [item.worker_id for item in response.items] == expected_ids,
                 "Assessment changed semantic candidate order.",
@@ -204,6 +377,12 @@ def main():
             require(
                 [item.rank for item in response.items] == [1, 2, 3],
                 "Unexpected result ranks.",
+            )
+            require(
+                response.job_id == job_id
+                and response.job_source_revision == 1
+                and response.embedding_model_version == model_version,
+                "Worker response metadata changed.",
             )
 
             for item, retrieved_row in zip(
@@ -242,9 +421,15 @@ def main():
             )
             print("PASS: complete, mismatched and incomplete assessments survive.")
 
-            # Confirm that the response can be serialized for later consumers.
             response.model_dump_json()
             print("PASS: assessed results serialize successfully.")
+
+            check_filtering(response, worker_ids["mismatch"])
+
+            require(
+                request.model_dump(mode="json") == request_before,
+                "The filtering pipeline mutated the supplied worker request.",
+            )
 
         remaining_sources = connection.execute(
             """
@@ -276,10 +461,13 @@ def main():
         require(
             (remaining_sources, remaining_vectors, remaining_models)
             == (0, 0, 0),
-            "Temporary assessment records were not fully rolled back.",
+            "Temporary worker-assessment records were not fully rolled back.",
         )
 
-    print("All worker-assessment checks passed; temporary records rolled back.")
+    print(
+        "All worker-assessment and filtering checks passed; "
+        "temporary records rolled back."
+    )
 
 
 if __name__ == "__main__":
