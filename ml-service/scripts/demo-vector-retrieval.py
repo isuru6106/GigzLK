@@ -2,12 +2,11 @@
 
 import json
 import re
-from getpass import getpass
 from pathlib import Path
 
 import psycopg
-from sentence_transformers import SentenceTransformer
 
+from vector_db_credentials import read_vector_password
 from vector_publication import publish_embeddings, vector_literal
 
 
@@ -46,6 +45,9 @@ def search_candidates(connection, kind, model_version, query):
 
 
 def main() -> None:
+    # Only the executable demo requires the embedding-model libraries.
+    from sentence_transformers import SentenceTransformer
+
     manifest = json.loads(
         (ROOT / "vector-model.json").read_text(encoding="utf-8")
     )
@@ -67,7 +69,7 @@ def main() -> None:
         raise RuntimeError("Unexpected model configuration.")
 
     model_version = f"e5-small-{revision}-{PREPROCESSING}"
-    password = getpass("Local vector client password: ")
+    password = read_vector_password()
 
     with psycopg.connect(
         host="127.0.0.1",
@@ -122,8 +124,7 @@ def main() -> None:
         if embeddings.shape != (len(rows), 384):
             raise RuntimeError("Unexpected embedding batch shape.")
 
-        # The helper revalidates and locks sources before publication.
-        # Any changed snapshot causes the entire publication to roll back.
+        # Revalidate and lock sources before publishing the complete batch.
         published = publish_embeddings(
             connection,
             rows=rows,
