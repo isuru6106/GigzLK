@@ -1,0 +1,171 @@
+{
+  "contractVersion": "recommendations-v1",
+  "direction": "WORKERS_FOR_JOB",
+  "subject": {
+    "entityKind": "job",
+    "id": "synthetic-job-mock-cafe",
+    "sourceRevision": "1"
+  },
+  "generatedAt": "2026-11-23T00:00:00Z",
+  "rankingVersion": "semantic-order-v1",
+  "embeddingModelVersion": "e5-small-614241f622f53c4eeff9890bdc4f31cfecc418b3-e5-prefix-normalized-v1",
+  "filterPolicyVersion": "synthetic-known-mismatches-v1",
+  "appliedFilters": {
+    "excludeAvailabilityMismatch": false,
+    "excludeLocationMismatch": false
+  },
+  "freshness": {
+    "status": "NOT_VERIFIED"
+  },
+  "items": [
+    {
+      "rank": 1,
+      "candidateId": "synthetic-worker-mock-complete",
+      "candidateSourceRevision": "1",
+      "assessment": {
+        "scoringVersion": "rules-v1",
+        "method": "RULE_BASED",
+        "jobId": "synthetic-job-mock-cafe",
+        "workerId": "synthetic-worker-mock-complete",
+        "assessmentStatus": "COMPLETE",
+        "overallScore": 100.0,
+        "factors": {
+          "skills": {
+            "score": 100.0,
+            "weight": 0.5,
+            "reasonCode": "SKILL_OVERLAP",
+            "explanation": "Matched 1 of 1 unique required skills."
+          },
+          "experience": {
+            "score": 100.0,
+            "weight": 0.2,
+            "reasonCode": "EXPERIENCE_RATIO",
+            "explanation": "Worker has 12 months of relevant experience; the job requires 6 months."
+          },
+          "availability": {
+            "score": 100.0,
+            "weight": 0.2,
+            "reasonCode": "AVAILABILITY_COVERS_JOB",
+            "explanation": "Worker availability covers the entire job interval."
+          },
+          "location": {
+            "score": 100.0,
+            "weight": 0.1,
+            "reasonCode": "LOCATION_MATCH",
+            "explanation": "Worker and job location identifiers match."
+          }
+        },
+        "missingFields": [],
+        "warnings": [
+          "RULE_BASED_SCORE_NOT_HIRING_PROBABILITY",
+          "DOMAIN_ELIGIBILITY_NOT_CHECKED"
+        ]
+      }
+    },
+    {
+      "rank": 2,
+      "candidateId": "synthetic-worker-mock-mismatch",
+      "candidateSourceRevision": "1",
+      "assessment": {
+        "scoringVersion": "rules-v1",
+        "method": "RULE_BASED",
+        "jobId": "synthetic-job-mock-cafe",
+        "workerId": "synthetic-worker-mock-mismatch",
+        "assessmentStatus": "COMPLETE",
+        "overallScore": 70.0,
+        "factors": {
+          "skills": {
+            "score": 100.0,
+            "weight": 0.5,
+            "reasonCode": "SKILL_OVERLAP",
+            "explanation": "Matched 1 of 1 unique required skills."
+          },
+          "experience": {
+            "score": 100.0,
+            "weight": 0.2,
+            "reasonCode": "EXPERIENCE_RATIO",
+            "explanation": "Worker has 12 months of relevant experience; the job requires 6 months."
+          },
+          "availability": {
+            "score": 0.0,
+            "weight": 0.2,
+            "reasonCode": "AVAILABILITY_MISMATCH",
+            "explanation": "Worker availability does not cover the entire job interval."
+          },
+          "location": {
+            "score": 0.0,
+            "weight": 0.1,
+            "reasonCode": "LOCATION_MISMATCH",
+            "explanation": "Worker and job location identifiers do not match."
+          }
+        },
+        "missingFields": [],
+        "warnings": [
+          "RULE_BASED_SCORE_NOT_HIRING_PROBABILITY",
+          "DOMAIN_ELIGIBILITY_NOT_CHECKED",
+          "AVAILABILITY_MISMATCH",
+          "LOCATION_MISMATCH"
+        ]
+      }
+    },
+    {
+      "rank": 3,
+      "candidateId": "synthetic-worker-mock-incomplete",
+      "candidateSourceRevision": "1",
+      "assessment": {
+        "scoringVersion": "rules-v1",
+        "method": "RULE_BASED",
+        "jobId": "synthetic-job-mock-cafe",
+        "workerId": "synthetic-worker-mock-incomplete",
+        "assessmentStatus": "INCOMPLETE",
+        "overallScore": null,
+        "factors": {
+          "skills": {
+            "score": null,
+            "weight": 0.5,
+            "reasonCode": "SKILLS_UNKNOWN",
+            "explanation": "Worker skills were not provided."
+          },
+          "experience": {
+            "score": null,
+            "weight": 0.2,
+            "reasonCode": "EXPERIENCE_UNKNOWN",
+            "explanation": "Relevant worker experience was not provided."
+          },
+          "availability": {
+            "score": null,
+            "weight": 0.2,
+            "reasonCode": "AVAILABILITY_UNKNOWN",
+            "explanation": "Worker availability was not provided."
+          },
+          "location": {
+            "score": null,
+            "weight": 0.1,
+            "reasonCode": "LOCATION_UNKNOWN",
+            "explanation": "Worker location was not provided for an onsite job."
+          }
+        },
+        "missingFields": [
+          "worker.skills",
+          "worker.relevant_experience_months",
+          "worker.available_from",
+          "worker.available_until",
+          "worker.location_id"
+        ],
+        "warnings": [
+          "RULE_BASED_SCORE_NOT_HIRING_PROBABILITY",
+          "DOMAIN_ELIGIBILITY_NOT_CHECKED"
+        ]
+      }
+    }
+  ],
+  "warnings": [
+    "SYNTHETIC_DEVELOPMENT_ONLY",
+    "SEMANTIC_SIMILARITY_NOT_SUITABILITY",
+    "RANKING_POLICY_NOT_QUALITY_VALIDATED",
+    "SOURCE_FRESHNESS_NOT_VERIFIED",
+    "CALLER_AUTHORIZATION_NOT_CHECKED",
+    "CANDIDATE_VISIBILITY_NOT_CHECKED",
+    "DOMAIN_ELIGIBILITY_NOT_CHECKED"
+  ]
+}

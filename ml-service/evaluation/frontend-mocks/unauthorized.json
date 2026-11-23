@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "AUTHENTICATION_REQUIRED",
+    "message": "Authentication is required.",
+    "requestId": "a13f977f-5229-4da5-9874-99aacbfa9337"
+  }
+}
