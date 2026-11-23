@@ -1,0 +1,37 @@
+import { Injectable } from '@nestjs/common';
+import type { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from './generated/prisma/client';
+
+@Injectable()
+export class DatabaseService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
+  constructor() {
+    const connectionString = process.env.DATABASE_URL;
+
+    if (!connectionString) {
+      throw new Error('DATABASE_URL is required');
+    }
+
+    const schema =
+      new URL(connectionString).searchParams.get('schema') ?? 'public';
+
+    super({
+      adapter: new PrismaPg({ connectionString }, { schema }),
+    });
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.$connect();
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.$disconnect();
+  }
+
+  async checkReadiness(): Promise<void> {
+    await this.$queryRaw`SELECT 1`;
+  }
+}

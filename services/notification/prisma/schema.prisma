@@ -1,0 +1,64 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum VerificationStatus {
+  QUEUED
+  SENDING
+  RETRY_WAIT
+  SENT
+  FAILED
+  CANCELLED
+  EXPIRED
+  DELIVERY_UNKNOWN
+}
+
+enum VerificationDeliveryOutcome {
+  NOT_SENT
+  ACCEPTED
+  MAY_HAVE_BEEN_SENT
+}
+
+model VerificationNotification {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  callerId              String                      @db.VarChar(100)
+  requestId             String                      @db.Uuid
+  fingerprint           String                      @db.VarChar(64)
+  fingerprintKeyId      String                      @db.VarChar(100)
+  templateId            String                      @db.VarChar(100)
+  status                VerificationStatus          @default(QUEUED)
+  deliveryOutcome       VerificationDeliveryOutcome @default(NOT_SENT)
+  expiresAt             DateTime                    @db.Timestamptz(3)
+  sendBefore            DateTime                    @db.Timestamptz(3)
+  metadataDeleteAfter   DateTime                    @db.Timestamptz(3)
+  attempts              Int                         @default(0)
+  nextAttemptAt         DateTime                    @default(now()) @db.Timestamptz(3)
+  cancellationRequested Boolean                     @default(false)
+  claimId               String?                     @db.Uuid
+  claimExpiresAt        DateTime?                   @db.Timestamptz(3)
+  providerReference     String?                     @db.VarChar(200)
+  createdAt             DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                    @updatedAt @db.Timestamptz(3)
+
+  payload VerificationPayload?
+
+  @@unique([callerId, requestId])
+  @@index([status, nextAttemptAt])
+  @@index([metadataDeleteAfter])
+}
+
+model VerificationPayload {
+  notificationId    String @id @db.Uuid
+  ciphertext        Bytes
+  nonce             Bytes
+  authenticationTag Bytes
+  encryptionKeyId   String @db.VarChar(100)
+
+  notification VerificationNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+}
