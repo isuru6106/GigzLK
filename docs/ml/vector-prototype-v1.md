@@ -216,3 +216,39 @@ dependency locking and live integration are outside this workflow.
 
 The first successful GitHub Actions run must be recorded before marking
 automated vector CI as verified.
+
+## Synthetic retrieved-worker assessment
+
+app/synthetic_recommendations.py assesses retrieved workers for one job
+using the existing assess_match function and rules-v1 scoring.
+
+The current policy preserves descending semantic similarity, with worker
+ID breaking ties. It does not combine similarity and suitability into a
+single score or rerank candidates by suitability.
+
+Results retain source revisions, embedding-model version, factor
+assessments, explanations, missing fields and mismatch warnings.
+Incomplete assessments retain a null overall suitability score.
+
+The module accepts synthetic job/worker IDs only, rejects duplicate
+candidates and limits each request to 100 candidates.
+
+Verification:
+- 34 assessment tests passed locally.
+- The complete ML suite passed 101 tests.
+- check-vector-worker-assessment.py passed four PostgreSQL integration
+  checks using temporary sources and synthetic numerical vectors.
+- Checks verified hidden-worker filtering, preserved retrieval metadata,
+  complete/incomplete assessments, mismatch warnings and serialization.
+- Temporary sources, vectors and model registrations were rolled back.
+
+Structured worker attributes are explicit test fixtures. They are not
+inferred from descriptions or supplied by a live source contract.
+Relevant experience must apply to the assessed job.
+
+Source freshness, caller authorization, authoritative visibility,
+eligibility, recommendation HTTP APIs, job suggestions for workers and
+frontend integration remain pending.
+
+The worker-assessment database check is included in the vector workflow.
+Its automated execution requires a successful Actions run for this change.
