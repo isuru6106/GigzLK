@@ -84,6 +84,9 @@ model OutboxEvent {
   publishedAt      DateTime? @db.Timestamptz(3)
   attempts         Int       @default(0)
   nextAttemptAt    DateTime  @default(now()) @db.Timestamptz(3)
+  claimId          String?   @db.Uuid
+  claimExpiresAt   DateTime? @db.Timestamptz(3)
+  failedAt         DateTime? @db.Timestamptz(3)
 
   @@unique([aggregateId, aggregateVersion, eventType])
   @@index([publishedAt, nextAttemptAt, createdAt])
