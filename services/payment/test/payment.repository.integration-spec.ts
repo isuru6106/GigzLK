@@ -1,4 +1,7 @@
 import 'dotenv/config';
+import { execFile } from 'node:child_process';
+import { resolve } from 'node:path';
+import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { DatabaseService } from '../src/database.service';
@@ -9,31 +12,80 @@ import * as releaseJournalFactory from '../src/payments/release-journal';
 describe('Payment repository with PostgreSQL', () => {
   let database: DatabaseService;
   let repository: PaymentRepository;
+  const executeFile = promisify(execFile);
+  const schemaName = `payment_test_${randomUUID().replaceAll('-', '')}`;
+  let originalDatabaseUrl: string | undefined;
+  let schemaCreated = false;
 
   const assignmentId = randomUUID();
   const invalidAmountAssignmentId = randomUUID();
 
   beforeAll(async () => {
+    originalDatabaseUrl = process.env.DATABASE_URL;
+
+    if (
+      !originalDatabaseUrl ||
+      new URL(originalDatabaseUrl).pathname !== '/gigzlk_payment_test'
+    ) {
+      throw new Error('Payment integration tests require gigzlk_payment_test');
+    }
+
+    const url = new URL(originalDatabaseUrl);
+    url.searchParams.set('schema', schemaName);
+    url.searchParams.set('options', `-c search_path=${schemaName}`);
+    process.env.DATABASE_URL = url.toString();
+
     database = new DatabaseService();
     await database.$connect();
+
+    // This schema name contains only a fixed prefix and generated UUID.
+    await database.$executeRawUnsafe(`CREATE SCHEMA "${schemaName}"`);
+    schemaCreated = true;
+
+    await executeFile(
+      process.execPath,
+      [
+        resolve('node_modules/prisma/build/index.js'),
+        'migrate',
+        'deploy',
+        '--config',
+        './prisma7.config.ts',
+      ],
+      {
+        cwd: process.cwd(),
+        env: { ...process.env },
+        timeout: 60_000,
+      },
+    );
+
+    const [location] = await database.$queryRaw<
+      { active_schema: string | null }[]
+    >`SELECT current_schema() AS active_schema`;
+
+    expect(location.active_schema).toBe(schemaName);
+
     repository = new PaymentRepository(database);
-  });
+  }, 90_000);
 
   afterAll(async () => {
-    if (database) {
+    try {
+      if (database && schemaCreated) {
+        await database.$executeRawUnsafe(`DROP SCHEMA "${schemaName}" CASCADE`);
+      }
+    } finally {
       try {
-        await database.payment.deleteMany({
-          where: {
-            assignmentId: {
-              in: [assignmentId, invalidAmountAssignmentId],
-            },
-          },
-        });
+        if (database) {
+          await database.$disconnect();
+        }
       } finally {
-        await database.$disconnect();
+        if (originalDatabaseUrl === undefined) {
+          delete process.env.DATABASE_URL;
+        } else {
+          process.env.DATABASE_URL = originalDatabaseUrl;
+        }
       }
     }
-  });
+  }, 30_000);
 
   it('saves and retrieves a payment with its initial state', async () => {
     const created = await repository.createForAssignment(
@@ -89,38 +141,12 @@ describe('Payment repository with PostgreSQL', () => {
   async function withPayment(
     run: (paymentId: string) => Promise<void>,
   ): Promise<void> {
-    const id = randomUUID();
+    const payment = await repository.createForAssignment(
+      randomUUID(),
+      1_000_000,
+    );
 
-    try {
-      const payment = await repository.createForAssignment(id, 1_000_000);
-      await run(payment.id);
-    } finally {
-      const payment = await database.payment.findUnique({
-        where: { assignmentId: id },
-      });
-
-      if (payment) {
-        await database.outboxEvent.deleteMany({
-          where: { aggregateId: payment.id },
-        });
-        const journal = await database.releaseJournal.findUnique({
-          where: { paymentId: payment.id },
-        });
-
-        if (journal) {
-          await database.ledgerEntry.deleteMany({
-            where: { journalId: journal.id },
-          });
-          await database.releaseJournal.delete({
-            where: { id: journal.id },
-          });
-        }
-
-        await database.payment.delete({
-          where: { id: payment.id },
-        });
-      }
-    }
+    await run(payment.id);
   }
 
   it('records simultaneous funding confirmations only once', async () => {
@@ -476,5 +502,179 @@ describe('Payment repository with PostgreSQL', () => {
         }),
       ).toBe(1);
     });
+  });
+  it('rejects ledger updates, deletes and truncation', async () => {
+    await withPayment(async (paymentId) => {
+      await repository.markFunded(paymentId);
+      await repository.markApproved(paymentId);
+
+      const service = new PaymentReleaseService(database);
+      const key = randomUUID();
+      const journal = await service.release(paymentId, 'test-caller', key);
+
+      const immutableError = {
+        code: 'P2010',
+        meta: {
+          driverAdapterError: expect.objectContaining({
+            message: 'Release ledger records are immutable',
+          }),
+        },
+      };
+
+      await expect(
+        database.$executeRaw`
+          UPDATE "ReleaseJournal"
+          SET "callerId" = 'changed'
+          WHERE "id" = ${journal.id}::uuid
+        `,
+      ).rejects.toMatchObject(immutableError);
+
+      await expect(
+        database.$executeRaw`
+          DELETE FROM "ReleaseJournal"
+          WHERE "id" = ${journal.id}::uuid
+        `,
+      ).rejects.toMatchObject(immutableError);
+
+      await expect(
+        database.$executeRaw`
+          UPDATE "LedgerEntry"
+          SET "position" = "position"
+          WHERE "journalId" = ${journal.id}::uuid
+        `,
+      ).rejects.toMatchObject(immutableError);
+
+      await expect(
+        database.$executeRaw`
+          DELETE FROM "LedgerEntry"
+          WHERE "journalId" = ${journal.id}::uuid
+        `,
+      ).rejects.toMatchObject(immutableError);
+
+      await expect(
+        database.$executeRaw`TRUNCATE TABLE "LedgerEntry"`,
+      ).rejects.toMatchObject(immutableError);
+
+      await expect(
+        database.$executeRaw`
+          TRUNCATE TABLE "ReleaseJournal", "LedgerEntry"
+        `,
+      ).rejects.toMatchObject(immutableError);
+
+      expect(await service.release(paymentId, 'test-caller', key)).toEqual(
+        journal,
+      );
+    });
+  });
+  it('rejects extra entries on an existing release journal', async () => {
+    await withPayment(async (paymentId) => {
+      await repository.markFunded(paymentId);
+      await repository.markApproved(paymentId);
+
+      const service = new PaymentReleaseService(database);
+      const key = randomUUID();
+      const journal = await service.release(paymentId, 'test-caller', key);
+
+      await expect(
+        database.$executeRaw`
+          INSERT INTO "LedgerEntry" (
+            "id", "journalId", "position", "account",
+            "side", "amountMinor", "currency"
+          )
+          VALUES (
+            ${randomUUID()}::uuid,
+            ${journal.id}::uuid,
+            99,
+            'WORKER_PAYABLE',
+            'CREDIT',
+            1,
+            'LKR'
+          )
+        `,
+      ).rejects.toMatchObject({
+        code: 'P2010',
+        meta: {
+          driverAdapterError: expect.objectContaining({
+            message: 'Release journal entries do not match journal amounts',
+          }),
+        },
+      });
+
+      expect(await service.release(paymentId, 'test-caller', key)).toEqual(
+        journal,
+      );
+    });
+  });
+  it('rejects a journal without accounting entries', async () => {
+    await withPayment(async (paymentId) => {
+      const journalId = randomUUID();
+
+      await expect(
+        database.$executeRaw`
+          INSERT INTO "ReleaseJournal" (
+            "id", "paymentId", "callerId", "idempotencyKey",
+            "grossMinor", "commissionMinor", "netMinor", "currency"
+          )
+          VALUES (
+            ${journalId}::uuid,
+            ${paymentId}::uuid,
+            'test-caller',
+            ${randomUUID()},
+            1000000,
+            100000,
+            900000,
+            'LKR'
+          )
+        `,
+      ).rejects.toMatchObject({
+        code: 'P2010',
+        meta: {
+          driverAdapterError: expect.objectContaining({
+            message: 'Release journal entries do not match journal amounts',
+          }),
+        },
+      });
+
+      expect(
+        await database.releaseJournal.findUnique({
+          where: { id: journalId },
+        }),
+      ).toBeNull();
+    });
+  });
+  it('releases with two entries when commission rounds to zero', async () => {
+    const payment = await repository.createForAssignment(randomUUID(), 4);
+
+    await repository.markFunded(payment.id);
+    await repository.markApproved(payment.id);
+
+    const service = new PaymentReleaseService(database);
+    const key = randomUUID();
+    const journal = await service.release(payment.id, 'test-caller', key);
+
+    expect(journal.grossMinor).toBe(4n);
+    expect(journal.commissionMinor).toBe(0n);
+    expect(journal.netMinor).toBe(4n);
+
+    expect(journal.entries).toMatchObject([
+      {
+        position: 0,
+        account: 'PROTECTED_FUNDS',
+        side: 'DEBIT',
+        amountMinor: 4n,
+        currency: 'LKR',
+      },
+      {
+        position: 1,
+        account: 'WORKER_PAYABLE',
+        side: 'CREDIT',
+        amountMinor: 4n,
+        currency: 'LKR',
+      },
+    ]);
+
+    expect(await service.release(payment.id, 'test-caller', key)).toEqual(
+      journal,
+    );
   });
 });
