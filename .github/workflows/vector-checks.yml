@@ -171,7 +171,8 @@ jobs:
             check-vector-source-updates.py \
             check-vector-source-concurrency.py \
             check-vector-publication-races.py \
-            check-vector-worker-assessment.py
+            check-vector-worker-assessment.py \
+            check-vector-job-assessment.py
           do
             echo "Running $script"
             python -u "ml-service/scripts/$script"
