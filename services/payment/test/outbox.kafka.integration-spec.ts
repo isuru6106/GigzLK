@@ -43,6 +43,7 @@ it('publishes a stored outbox event to Kafka and records delivery', async () => 
   });
 
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let cleanupFailed = false;
 
   try {
     await database.$connect();
@@ -68,11 +69,11 @@ it('publishes a stored outbox event to Kafka and records delivery', async () => 
     });
 
     await consumer.run({
-      eachMessage: async ({ message }) => {
+      eachMessage: ({ message }) => {
         const text = message.value?.toString();
 
         if (!text) {
-          return;
+          return Promise.resolve();
         }
 
         const value: unknown = JSON.parse(text);
@@ -88,6 +89,8 @@ it('publishes a stored outbox event to Kafka and records delivery', async () => 
             value,
           });
         }
+
+        return Promise.resolve();
       },
     });
 
@@ -162,10 +165,18 @@ it('publishes a stored outbox event to Kafka and records delivery', async () => 
       database.outboxEvent.deleteMany({ where: { eventId } }),
     ]);
 
-    await database.$disconnect();
+    const disconnect = await Promise.allSettled([database.$disconnect()]);
 
-    if (results.some((result) => result.status === 'rejected')) {
-      throw new Error('Kafka integration test cleanup failed');
+    cleanupFailed = [...results, ...disconnect].some(
+      (result) => result.status === 'rejected',
+    );
+
+    if (cleanupFailed) {
+      console.error('Kafka integration test cleanup failed');
     }
+  }
+
+  if (cleanupFailed) {
+    throw new Error('Kafka integration test cleanup failed');
   }
 }, 60_000);

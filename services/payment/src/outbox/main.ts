@@ -54,6 +54,8 @@ async function main(): Promise<void> {
   process.once('SIGINT', stop);
   process.once('SIGTERM', stop);
 
+  let cleanupFailed = false;
+
   try {
     await database.$connect();
     await producer.connect();
@@ -102,11 +104,17 @@ async function main(): Promise<void> {
       database.$disconnect(),
     ]);
 
-    if (cleanup.some((result) => result.status === 'rejected')) {
-      throw new Error('Outbox worker cleanup failed');
-    }
+    cleanupFailed = cleanup.some((result) => result.status === 'rejected');
 
-    console.info('Payment outbox worker stopped');
+    if (cleanupFailed) {
+      console.error('Outbox worker cleanup failed');
+    } else {
+      console.info('Payment outbox worker stopped');
+    }
+  }
+
+  if (cleanupFailed) {
+    throw new Error('Outbox worker cleanup failed');
   }
 }
 
