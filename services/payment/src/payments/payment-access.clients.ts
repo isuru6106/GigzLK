@@ -7,6 +7,7 @@ export interface PaymentPrincipal {
 @Injectable()
 export class PaymentSessionClient {
   checkSession(_accessToken: string): Promise<PaymentPrincipal> {
+    void _accessToken;
     return Promise.reject(
       new ServiceUnavailableException({
         code: 'AUTH_UNAVAILABLE',
@@ -19,6 +20,8 @@ export class PaymentSessionClient {
 @Injectable()
 export class PaymentAssignmentClient {
   canReadPayment(_accountId: string, _assignmentId: string): Promise<boolean> {
+    void _accountId;
+    void _assignmentId;
     return Promise.reject(
       new ServiceUnavailableException({
         code: 'ASSIGNMENT_UNAVAILABLE',
