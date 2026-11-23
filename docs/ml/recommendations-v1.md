@@ -433,3 +433,57 @@ Technical work may proceed while source contracts remain under review.
 Do not enable live ingestion or expose private worker information.
 
 Issue #51 remains open for unresolved planning and source-contract items.
+
+## 15. Synthetic suitability-filter prototype
+
+Status: implemented and locally tested for synthetic development.
+Live policy acceptance and integration remain OPEN.
+
+Implementation: ml-service/app/synthetic_suitability_filters.py
+
+Policy version: synthetic-known-mismatches-v1
+
+Both filters default to disabled:
+- exclude_availability_mismatch
+- exclude_location_mismatch
+
+When enabled:
+- The availability filter excludes AVAILABILITY_MISMATCH assessments.
+- The location filter excludes LOCATION_MISMATCH assessments.
+- Unknown information is retained; it is not treated as a mismatch.
+- Known mismatches may be excluded even when another factor makes the
+  overall assessment incomplete.
+- Remote jobs retain the existing rules-v1 location behavior.
+- Scores and assessments are unchanged.
+- Remaining semantic order is preserved and ranks are renumbered.
+- Original responses and filter options are not mutated.
+
+The summary reports input, returned and excluded candidate counts.
+A candidate excluded for both reasons counts once in excluded_count,
+but contributes to both reason counts.
+
+Location-ID mismatch does not establish geographic distance or
+authoritative eligibility. Identifier rules remain subject to the
+owning source contract.
+
+An empty filtered result means no candidates remain in the retrieved
+pool under the selected filters. It does not prove that the full source
+contains no suitable candidates or that semantic no-match detection
+has been implemented.
+
+This prototype does not:
+- Combine semantic similarity and suitability into a ranking score.
+- Apply a minimum similarity or suitability threshold.
+- Verify caller authorization, source freshness or live disclosure.
+- Replace authoritative application, offer or assignment checks.
+- Expose a recommendation HTTP endpoint.
+
+Verification:
+- 33 filter tests passed locally across worker and job assessments.
+- Full ML regression suite: 198 tests passed.
+- Tests cover disabled filters, overlapping exclusions, incomplete
+  assessments, unknown factors, remote jobs, stable ordering, metadata,
+  input preservation and strict option validation.
+
+Synthetic implementation and passing tests do not establish approval
+of these filters for live recommendations.
