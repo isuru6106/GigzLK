@@ -39,11 +39,14 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: ml-service/requirements-vector-ci-lock.txt
+          cache-dependency-path: |
+            ml-service/requirements-lock.txt
+            ml-service/requirements-vector-ci-lock.txt
 
       - name: Install database-check dependencies
         run: |
           python -m pip install --only-binary=:all: \
+            -r ml-service/requirements-lock.txt \
             -r ml-service/requirements-vector-ci-lock.txt
           python -m pip check
 
@@ -167,7 +170,8 @@ jobs:
             check-vector-retrieval.py \
             check-vector-source-updates.py \
             check-vector-source-concurrency.py \
-            check-vector-publication-races.py
+            check-vector-publication-races.py \
+            check-vector-worker-assessment.py
           do
             echo "Running $script"
             python -u "ml-service/scripts/$script"
