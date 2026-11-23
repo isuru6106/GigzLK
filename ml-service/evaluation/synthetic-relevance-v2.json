@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "dataset_id": "synthetic-relevance-v2",
+  "provenance": "Hand-authored synthetic development examples expanded from v1. No real workers, jobs or personal data. New labels are draft judgments authored before inspecting v2 retrieval scores.",
+  "judgment_status": "DRAFT_UNREVIEWED",
+  "languages": [
+    "en"
+  ],
+  "relevance_scope": "Text relevance only. Does not assess availability, location, pay, consent or domain eligibility.",
+  "grade_definitions": {
+    "0": "Unrelated",
+    "1": "Weakly related",
+    "2": "Relevant",
+    "3": "Strongly relevant"
+  },
+  "candidates": [
+    {
+      "id": "synthetic-worker-cafe",
+      "kind": "worker",
+      "text": "Cafe assistant who prepares hot and cold drinks, takes orders, serves customers and cleans tables."
+    },
+    {
+      "id": "synthetic-worker-python",
+      "kind": "worker",
+      "text": "Python programmer who writes automation scripts, cleans CSV datasets and validates spreadsheet records."
+    },
+    {
+      "id": "synthetic-worker-photo",
+      "kind": "worker",
+      "text": "Event photographer who captures portraits and candid moments, selects photographs and edits image colour."
+    },
+    {
+      "id": "synthetic-worker-warehouse",
+      "kind": "worker",
+      "text": "Warehouse assistant who counts inventory, labels packages, packs orders and organizes stock."
+    },
+    {
+      "id": "synthetic-worker-tutor",
+      "kind": "worker",
+      "text": "Mathematics tutor who explains algebra, prepares practice questions and helps school students understand lessons."
+    },
+    {
+      "id": "synthetic-worker-social",
+      "kind": "worker",
+      "text": "Social media assistant who writes captions, schedules posts and creates simple promotional graphics."
+    },
+    {
+      "id": "synthetic-job-cafe",
+      "kind": "job",
+      "text": "Cafe shift preparing beverages, taking customer orders, serving drinks and keeping the counter clean."
+    },
+    {
+      "id": "synthetic-job-python",
+      "kind": "job",
+      "text": "Write a Python script to remove duplicate CSV rows, validate records and automate a data-cleaning task."
+    },
+    {
+      "id": "synthetic-job-photo",
+      "kind": "job",
+      "text": "Photograph a small event, capture portraits and candid photographs, then select and edit the images."
+    },
+    {
+      "id": "synthetic-job-warehouse",
+      "kind": "job",
+      "text": "Pack customer orders, label parcels, count inventory and arrange warehouse shelves."
+    },
+    {
+      "id": "synthetic-job-tutor",
+      "kind": "job",
+      "text": "Help a school student practise mathematics, explain algebra and work through revision questions."
+    },
+    {
+      "id": "synthetic-job-social",
+      "kind": "job",
+      "text": "Prepare social media captions, schedule promotional posts and create simple graphics for a small business."
+    },
+    {
+      "id": "synthetic-worker-event-server",
+      "kind": "worker",
+      "text": "Event catering assistant who serves prepared drinks and snacks, helps guests and clears used plates. Does not prepare coffee."
+    },
+    {
+      "id": "synthetic-worker-csv-entry",
+      "kind": "worker",
+      "text": "Data-entry assistant who manually types spreadsheet records, checks rows and corrects typing errors. Does not write programs."
+    },
+    {
+      "id": "synthetic-worker-photo-editor",
+      "kind": "worker",
+      "text": "Photo editor who adjusts exposure and colour, crops images and retouches portraits supplied by clients. Does not attend events or take photographs."
+    },
+    {
+      "id": "synthetic-worker-physics-tutor",
+      "kind": "worker",
+      "text": "Physics tutor who helps school students understand mechanics and electricity, including the algebra needed for calculations."
+    },
+    {
+      "id": "synthetic-job-event-server",
+      "kind": "job",
+      "text": "Serve prepared drinks and snacks to guests at a catered event and clear used plates. Beverage preparation is not required."
+    },
+    {
+      "id": "synthetic-job-csv-entry",
+      "kind": "job",
+      "text": "Manually enter spreadsheet records and correct typing errors. This task requires data entry rather than writing software."
+    },
+    {
+      "id": "synthetic-job-photo-editor",
+      "kind": "job",
+      "text": "Retouch supplied event photographs, correct colour and crop portraits. No event attendance or camera work is required."
+    },
+    {
+      "id": "synthetic-job-physics-tutor",
+      "kind": "job",
+      "text": "Explain school physics exercises and help a student use algebra for mechanics and electricity calculations."
+    }
+  ],
+  "queries": [
+    {
+      "id": "synthetic-query-worker-cafe",
+      "kind": "worker",
+      "language": "en",
+      "text": "Find someone who can make beverages and look after people ordering refreshments.",
+      "relevance": {
+        "synthetic-worker-cafe": 3,
+        "synthetic-worker-python": 0,
+        "synthetic-worker-photo": 0,
+        "synthetic-worker-warehouse": 0,
+        "synthetic-worker-tutor": 0,
+        "synthetic-worker-social": 0,
+        "synthetic-worker-event-server": 2,
+        "synthetic-worker-csv-entry": 0,
+        "synthetic-worker-photo-editor": 0,
+        "synthetic-worker-physics-tutor": 0
+      }
+    },
+    {
+      "id": "synthetic-query-worker-python",
+      "kind": "worker",
+      "language": "en",
+      "text": "I need a person to automate checking tabular files and removing repeated records.",
+      "relevance": {
+        "synthetic-worker-cafe": 0,
+        "synthetic-worker-python": 3,
+        "synthetic-worker-photo": 0,
+        "synthetic-worker-warehouse": 1,
+        "synthetic-worker-tutor": 0,
+        "synthetic-worker-social": 0,
+        "synthetic-worker-event-server": 0,
+        "synthetic-worker-csv-entry": 1,
+        "synthetic-worker-photo-editor": 0,
+        "synthetic-worker-physics-tutor": 0
+      }
+    },
+    {
+      "id": "synthetic-query-worker-photo",
+      "kind": "worker",
+      "language": "en",
+      "text": "Find someone to document a celebration with a camera and improve the pictures afterwards.",
+      "relevance": {
+        "synthetic-worker-cafe": 0,
+        "synthetic-worker-python": 0,
+        "synthetic-worker-photo": 3,
+        "synthetic-worker-warehouse": 0,
+        "synthetic-worker-tutor": 0,
+        "synthetic-worker-social": 1,
+        "synthetic-worker-event-server": 0,
+        "synthetic-worker-csv-entry": 0,
+        "synthetic-worker-photo-editor": 2,
+        "synthetic-worker-physics-tutor": 0
+      }
+    },
+    {
+      "id": "synthetic-query-worker-warehouse",
+      "kind": "worker",
+      "language": "en",
+      "text": "We need help preparing parcels for dispatch and checking how many products remain.",
+      "relevance": {
+        "synthetic-worker-cafe": 0,
+        "synthetic-worker-python": 0,
+        "synthetic-worker-photo": 0,
+        "synthetic-worker-warehouse": 3,
+        "synthetic-worker-tutor": 0,
+        "synthetic-worker-social": 0,
+        "synthetic-worker-event-server": 0,
+        "synthetic-worker-csv-entry": 0,
+        "synthetic-worker-photo-editor": 0,
+        "synthetic-worker-physics-tutor": 0
+      }
+    },
+    {
+      "id": "synthetic-query-job-cafe",
+      "kind": "job",
+      "language": "en",
+      "text": "I can prepare coffee and refreshments and assist customers at a drinks counter.",
+      "relevance": {
+        "synthetic-job-cafe": 3,
+        "synthetic-job-python": 0,
+        "synthetic-job-photo": 0,
+        "synthetic-job-warehouse": 0,
+        "synthetic-job-tutor": 0,
+        "synthetic-job-social": 0,
+        "synthetic-job-event-server": 2,
+        "synthetic-job-csv-entry": 0,
+        "synthetic-job-photo-editor": 0,
+        "synthetic-job-physics-tutor": 0
+      }
+    },
+    {
+      "id": "synthetic-query-job-python",
+      "kind": "job",
+      "language": "en",
+      "text": "I write programs that tidy tabular data and eliminate repeated entries.",
+      "relevance": {
+        "synthetic-job-cafe": 0,
+        "synthetic-job-python": 3,
+        "synthetic-job-photo": 0,
+        "synthetic-job-warehouse": 0,
+        "synthetic-job-tutor": 0,
+        "synthetic-job-social": 0,
+        "synthetic-job-event-server": 0,
+        "synthetic-job-csv-entry": 1,
+        "synthetic-job-photo-editor": 0,
+        "synthetic-job-physics-tutor": 0
+      }
+    },
+    {
+      "id": "synthetic-query-job-photo",
+      "kind": "job",
+      "language": "en",
+      "text": "I use a camera to capture celebrations and can retouch the resulting pictures.",
+      "relevance": {
+        "synthetic-job-cafe": 0,
+        "synthetic-job-python": 0,
+        "synthetic-job-photo": 3,
+        "synthetic-job-warehouse": 0,
+        "synthetic-job-tutor": 0,
+        "synthetic-job-social": 1,
+        "synthetic-job-event-server": 0,
+        "synthetic-job-csv-entry": 0,
+        "synthetic-job-photo-editor": 2,
+        "synthetic-job-physics-tutor": 0
+      }
+    },
+    {
+      "id": "synthetic-query-job-tutor",
+      "kind": "job",
+      "language": "en",
+      "text": "I help children understand equations and guide them through numerical exercises.",
+      "relevance": {
+        "synthetic-job-cafe": 0,
+        "synthetic-job-python": 0,
+        "synthetic-job-photo": 0,
+        "synthetic-job-warehouse": 0,
+        "synthetic-job-tutor": 3,
+        "synthetic-job-social": 0,
+        "synthetic-job-event-server": 0,
+        "synthetic-job-csv-entry": 0,
+        "synthetic-job-photo-editor": 0,
+        "synthetic-job-physics-tutor": 2
+      }
+    },
+    {
+      "id": "synthetic-query-worker-marine-repair",
+      "kind": "worker",
+      "language": "en",
+      "text": "Find a marine engine mechanic to diagnose and repair a boat motor.",
+      "relevance": {
+        "synthetic-worker-cafe": 0,
+        "synthetic-worker-python": 0,
+        "synthetic-worker-photo": 0,
+        "synthetic-worker-warehouse": 0,
+        "synthetic-worker-tutor": 0,
+        "synthetic-worker-social": 0,
+        "synthetic-worker-event-server": 0,
+        "synthetic-worker-csv-entry": 0,
+        "synthetic-worker-photo-editor": 0,
+        "synthetic-worker-physics-tutor": 0
+      }
+    },
+    {
+      "id": "synthetic-query-job-legal-translation",
+      "kind": "job",
+      "language": "en",
+      "text": "I translate legal documents from French into English.",
+      "relevance": {
+        "synthetic-job-cafe": 0,
+        "synthetic-job-python": 0,
+        "synthetic-job-photo": 0,
+        "synthetic-job-warehouse": 0,
+        "synthetic-job-tutor": 0,
+        "synthetic-job-social": 0,
+        "synthetic-job-event-server": 0,
+        "synthetic-job-csv-entry": 0,
+        "synthetic-job-photo-editor": 0,
+        "synthetic-job-physics-tutor": 0
+      }
+    }
+  ],
+  "derived_from": {
+    "dataset_id": "synthetic-relevance-v1",
+    "sha256": "4ca89b094b214ab110e7cdd773d8ca475a95f5f7e8814982a9b02de19f536dd9"
+  },
+  "evaluation_split": "DEVELOPMENT_NOT_HELD_OUT"
+}

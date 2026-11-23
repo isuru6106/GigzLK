@@ -1,0 +1,641 @@
+{
+  "report_schema_version": 1,
+  "generated_at": "2026-11-23T09:50:34.698609+00:00",
+  "dataset_id": "synthetic-relevance-v2",
+  "dataset_sha256": "0129d98e8126a99eee94c82f925806b7fa12f41201c9cb63c4cadaf254a8d6e9",
+  "judgment_status": "DRAFT_UNREVIEWED",
+  "k": 3,
+  "relevant_grade_threshold": 2,
+  "candidate_count": 20,
+  "query_count": 10,
+  "model_manifest_sha256": "01ddaa7e05a17dc30c59965cca71f8b618f8dd290a7df6616caf71d36d65d7d1",
+  "model": {
+    "model_name": "intfloat/multilingual-e5-small",
+    "dimensions": 384,
+    "preprocessing_version": "e5-prefix-normalized-v1",
+    "max_sequence_length": 512,
+    "normalize_embeddings": true,
+    "model_revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3"
+  },
+  "execution": {
+    "device": "cpu",
+    "local_files_only": true,
+    "python": "3.13.14 (tags/v3.13.14:fd17997, Jun 10 2026, 13:03:48) [MSC v.1944 64 bit (AMD64)]",
+    "packages": {
+      "numpy": "2.5.5",
+      "torch": "2.13.0+cpu",
+      "sentence-transformers": "6.3.0",
+      "transformers": "5.24.0"
+    }
+  },
+  "ranking_policy": "Score descending; candidate ID breaks ties.",
+  "keyword_policy": "Jaccard overlap of casefolded Unicode word/number tokens; no stemming, synonyms or stop-word removal.",
+  "summary": {
+    "keyword_jaccard": {
+      "precision_at_k": {
+        "macro_mean": 0.3333333333333333,
+        "defined_query_count": 10,
+        "total_query_count": 10
+      },
+      "recall_at_k": {
+        "macro_mean": 0.8125,
+        "defined_query_count": 8,
+        "total_query_count": 10
+      },
+      "ndcg_at_k": {
+        "macro_mean": 0.7178120948661003,
+        "defined_query_count": 8,
+        "total_query_count": 10
+      }
+    },
+    "embedding_cosine": {
+      "precision_at_k": {
+        "macro_mean": 0.4333333333333333,
+        "defined_query_count": 10,
+        "total_query_count": 10
+      },
+      "recall_at_k": {
+        "macro_mean": 1.0,
+        "defined_query_count": 8,
+        "total_query_count": 10
+      },
+      "ndcg_at_k": {
+        "macro_mean": 0.9792489040497686,
+        "defined_query_count": 8,
+        "total_query_count": 10
+      }
+    }
+  },
+  "results": [
+    {
+      "query_id": "synthetic-query-worker-cafe",
+      "kind": "worker",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-warehouse",
+              "retrieval_score": 0.09090909090909091,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-photo",
+              "retrieval_score": 0.08695652173913043,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-python",
+              "retrieval_score": 0.08695652173913043,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-cafe",
+              "retrieval_score": 0.8722913265228271,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-worker-event-server",
+              "retrieval_score": 0.8451331853866577,
+              "draft_relevance_grade": 2
+            },
+            {
+              "candidate_id": "synthetic-worker-warehouse",
+              "retrieval_score": 0.837135910987854,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.6666666666666666,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        }
+      }
+    },
+    {
+      "query_id": "synthetic-query-worker-python",
+      "kind": "worker",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-python",
+              "retrieval_score": 0.08333333333333333,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-worker-csv-entry",
+              "retrieval_score": 0.06896551724137931,
+              "draft_relevance_grade": 1
+            },
+            {
+              "candidate_id": "synthetic-worker-warehouse",
+              "retrieval_score": 0.041666666666666664,
+              "draft_relevance_grade": 1
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.3333333333333333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-python",
+              "retrieval_score": 0.868394136428833,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-worker-csv-entry",
+              "retrieval_score": 0.8659511804580688,
+              "draft_relevance_grade": 1
+            },
+            {
+              "candidate_id": "synthetic-worker-warehouse",
+              "retrieval_score": 0.8424564599990845,
+              "draft_relevance_grade": 1
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.3333333333333333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        }
+      }
+    },
+    {
+      "query_id": "synthetic-query-worker-photo",
+      "kind": "worker",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-physics-tutor",
+              "retrieval_score": 0.07407407407407407,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-warehouse",
+              "retrieval_score": 0.041666666666666664,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-photo",
+              "retrieval_score": 0.04,
+              "draft_relevance_grade": 3
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.3333333333333333,
+            "recall_at_k": 0.5,
+            "ndcg_at_k": 0.3726262671130988
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-photo",
+              "retrieval_score": 0.8814407587051392,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-worker-photo-editor",
+              "retrieval_score": 0.8388505578041077,
+              "draft_relevance_grade": 2
+            },
+            {
+              "candidate_id": "synthetic-worker-social",
+              "retrieval_score": 0.821257472038269,
+              "draft_relevance_grade": 1
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.6666666666666666,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        }
+      }
+    },
+    {
+      "query_id": "synthetic-query-worker-warehouse",
+      "kind": "worker",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-physics-tutor",
+              "retrieval_score": 0.07407407407407407,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-warehouse",
+              "retrieval_score": 0.041666666666666664,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-worker-photo",
+              "retrieval_score": 0.04,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.3333333333333333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.6309297535714575
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-warehouse",
+              "retrieval_score": 0.8362051248550415,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-worker-python",
+              "retrieval_score": 0.7952755689620972,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-event-server",
+              "retrieval_score": 0.7916671633720398,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.3333333333333333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        }
+      }
+    },
+    {
+      "query_id": "synthetic-query-job-cafe",
+      "kind": "job",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-event-server",
+              "retrieval_score": 0.14814814814814814,
+              "draft_relevance_grade": 2
+            },
+            {
+              "candidate_id": "synthetic-job-cafe",
+              "retrieval_score": 0.13043478260869565,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-job-social",
+              "retrieval_score": 0.125,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.6666666666666666,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.8339912323981488
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-cafe",
+              "retrieval_score": 0.9057983160018921,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-job-event-server",
+              "retrieval_score": 0.8459348678588867,
+              "draft_relevance_grade": 2
+            },
+            {
+              "candidate_id": "synthetic-job-warehouse",
+              "retrieval_score": 0.8255237936973572,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.6666666666666666,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        }
+      }
+    },
+    {
+      "query_id": "synthetic-query-job-python",
+      "kind": "job",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-python",
+              "retrieval_score": 0.125,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-job-csv-entry",
+              "retrieval_score": 0.07692307692307693,
+              "draft_relevance_grade": 1
+            },
+            {
+              "candidate_id": "synthetic-job-warehouse",
+              "retrieval_score": 0.047619047619047616,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.3333333333333333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-python",
+              "retrieval_score": 0.8670471906661987,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-job-csv-entry",
+              "retrieval_score": 0.8167682886123657,
+              "draft_relevance_grade": 1
+            },
+            {
+              "candidate_id": "synthetic-job-warehouse",
+              "retrieval_score": 0.798915445804596,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.3333333333333333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        }
+      }
+    },
+    {
+      "query_id": "synthetic-query-job-photo",
+      "kind": "job",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-photo",
+              "retrieval_score": 0.17391304347826086,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-job-physics-tutor",
+              "retrieval_score": 0.125,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-job-photo-editor",
+              "retrieval_score": 0.11538461538461539,
+              "draft_relevance_grade": 2
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.6666666666666666,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.9049495058460971
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-photo",
+              "retrieval_score": 0.8614989519119263,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-job-photo-editor",
+              "retrieval_score": 0.8450350761413574,
+              "draft_relevance_grade": 2
+            },
+            {
+              "candidate_id": "synthetic-job-social",
+              "retrieval_score": 0.7952314019203186,
+              "draft_relevance_grade": 1
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.6666666666666666,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        }
+      }
+    },
+    {
+      "query_id": "synthetic-query-job-tutor",
+      "kind": "job",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-tutor",
+              "retrieval_score": 0.14285714285714285,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-job-physics-tutor",
+              "retrieval_score": 0.13636363636363635,
+              "draft_relevance_grade": 2
+            },
+            {
+              "candidate_id": "synthetic-job-warehouse",
+              "retrieval_score": 0.047619047619047616,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.6666666666666666,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-physics-tutor",
+              "retrieval_score": 0.8924961090087891,
+              "draft_relevance_grade": 2
+            },
+            {
+              "candidate_id": "synthetic-job-tutor",
+              "retrieval_score": 0.8687256574630737,
+              "draft_relevance_grade": 3
+            },
+            {
+              "candidate_id": "synthetic-job-csv-entry",
+              "retrieval_score": 0.7798387408256531,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.6666666666666666,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.8339912323981488
+          }
+        }
+      }
+    },
+    {
+      "query_id": "synthetic-query-worker-marine-repair",
+      "kind": "worker",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-warehouse",
+              "retrieval_score": 0.045454545454545456,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-photo",
+              "retrieval_score": 0.043478260869565216,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-python",
+              "retrieval_score": 0.043478260869565216,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": null,
+            "ndcg_at_k": null
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-worker-physics-tutor",
+              "retrieval_score": 0.8090931177139282,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-python",
+              "retrieval_score": 0.8031280636787415,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-worker-warehouse",
+              "retrieval_score": 0.7856190800666809,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": null,
+            "ndcg_at_k": null
+          }
+        }
+      }
+    },
+    {
+      "query_id": "synthetic-query-job-legal-translation",
+      "kind": "job",
+      "language": "en",
+      "candidate_count": 10,
+      "methods": {
+        "keyword_jaccard": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-cafe",
+              "retrieval_score": 0.0,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-job-csv-entry",
+              "retrieval_score": 0.0,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-job-event-server",
+              "retrieval_score": 0.0,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": null,
+            "ndcg_at_k": null
+          }
+        },
+        "embedding_cosine": {
+          "top_results": [
+            {
+              "candidate_id": "synthetic-job-python",
+              "retrieval_score": 0.7772954702377319,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-job-csv-entry",
+              "retrieval_score": 0.7771123051643372,
+              "draft_relevance_grade": 0
+            },
+            {
+              "candidate_id": "synthetic-job-tutor",
+              "retrieval_score": 0.7739979028701782,
+              "draft_relevance_grade": 0
+            }
+          ],
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": null,
+            "ndcg_at_k": null
+          }
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Synthetic English-only development examples.",
+    "Draft relevance judgments have not been independently reviewed.",
+    "Small candidate pools with limited hard-negative coverage.",
+    "No training or hyperparameter tuning is performed.",
+    "No suitability, eligibility, visibility or freshness evaluation.",
+    "In-memory exact cosine ranking; PostgreSQL is not exercised.",
+    "Model input length is capped at 512 tokens.",
+    "Results do not establish real-world recommendation quality."
+  ]
+}

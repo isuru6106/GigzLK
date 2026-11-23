@@ -107,3 +107,67 @@ package versions, per-query results, aggregate metrics and limitations.
 
 This evaluation does not approve combined suitability ranking,
 recommendation HTTP APIs or live integration.
+
+## Expanded development evaluation: v2
+
+Dataset: synthetic-relevance-v2.json
+Report: reports/synthetic-relevance-v2-run-01.json
+
+The expanded dataset contains:
+- 20 synthetic candidates: ten jobs and ten workers.
+- Ten English queries.
+- Five queries with multiple relevant candidates.
+- Two queries with no relevant candidates.
+
+The original v1 dataset and report remain unchanged.
+Existing examples were reused, so v2 is a development set, not held-out
+evaluation. All judgments remain DRAFT_UNREVIEWED.
+
+### Queries with relevant candidates
+
+The following macro means cover the eight queries with at least one
+candidate graded 2 or higher:
+
+| Metric | Keyword Jaccard | Embedding cosine |
+|---|---:|---:|
+| Precision@3 | 0.4167 | 0.5417 |
+| Recall@3 | 0.8125 | 1.0000 |
+| NDCG@3 | 0.7178 | 0.9792 |
+
+Embedding retrieval returned all candidates graded relevant within the
+top three for these eight queries.
+
+The tutor query is a counterexample to uniformly better embedding
+ordering: keyword NDCG@3 was 1.0000, while embedding NDCG@3 was 0.8340.
+The grades and returned order require review before drawing conclusions.
+
+### Queries without relevant candidates
+
+Both methods returned three candidates for each no-match query.
+All returned candidates had grade zero.
+
+Precision@3 was zero. Recall and NDCG were undefined and recorded as null.
+These results do not establish a successful no-match detection mechanism.
+
+The runner's overall summary includes all ten queries in Precision,
+while Recall and NDCG exclude undefined values. Those aggregates therefore
+use different query populations. The table above uses only the eight
+queries with relevant candidates for all three metrics.
+
+### Interpretation
+
+Compare methods within the same dataset and query population.
+Do not interpret differences between v1 and v2 aggregate results as a
+model improvement: the candidate pools and judgments changed.
+
+Next work:
+- Independently review judgments and the tutor-query ordering.
+- Expand difficult related candidates and realistic query variations.
+- Evaluate stronger lexical baselines.
+- Define and evaluate no-match behavior on separate development and
+  held-out examples before selecting thresholds.
+- Keep no-match detection separate from infrastructure failures.
+- Evaluate required languages with appropriately reviewed examples.
+
+No production threshold, suitability-ranking policy or live integration
+is approved by these draft results.
