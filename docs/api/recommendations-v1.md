@@ -357,8 +357,13 @@ Returning fewer than limit items does not establish hasMore: false.
 
 ## 11. Authorization and source boundaries
 
-Member 2 and the relevant domain owners retain authoritative checks
-for eligibility, capacity, conflicts and permitted actions.
+Auth establishes authenticated identity and session validity.
+
+The relevant domain services own disclosure permissions, eligibility,
+capacity, conflicts and action permissions.
+
+Member 4 implements retrieval and assessment against reviewed source
+contracts. Caller-supplied identifiers do not establish authority.
 
 A recommendation does not reserve, assign or accept a worker.
 
@@ -418,3 +423,102 @@ Before enabling live recommendation operations:
 - Update operational documentation and the delivery checklist.
 
 Issue #51 remains open for unresolved planning and integration decisions.
+
+## 14. Cross-member review decisions
+
+Review record: 2026-11-23.
+Reviewed proposal: PR #82, merged at 5cd8250.
+
+Members 1 and 2 confirmed the following synthetic mock scope.
+These confirmations do not establish implemented screens, HTTP routes,
+live integration or acceptance of the live ranking policy.
+
+### Confirmed synthetic frontend mock behavior
+
+- Use camelCase frontend response fields.
+- Keep rules-v1 suitability assessments separate from semantic ordering.
+- Preserve COMPLETE and INCOMPLETE assessment states.
+- Keep incomplete overall scores null and retain known factor assessments.
+- Show structured reasons, plain-text explanations and mismatch warnings.
+- Support loading, results, incomplete, empty, unavailable and unauthorized states.
+- Preserve ordinary browsing when recommendations are unavailable.
+- Do not model partial-success responses.
+- Include no-store handling in the proposed serving contract.
+
+Start with a bounded, non-paginated mock list.
+
+Do not show Load more, total counts or inferred hasMore values.
+The final list bound and live retrieval budget still require agreement.
+
+Use these filter labels:
+
+- Hide known schedule conflicts.
+- Hide known location mismatches.
+
+Both filters are off by default.
+Unknown information remains visible and does not imply compatibility.
+
+Explain that ordering follows semantic relevance.
+Suitability scores explain separate factors and do not determine rank
+or establish eligibility.
+
+Label NOT_VERIFIED freshness explicitly as synthetic/mock information.
+It must not become a fallback that bypasses required live verification.
+
+### Supported proposals awaiting final specification
+
+Members 1 and 2 support canonical decimal-string source revisions
+as a proposal, including small fixture values.
+
+The revision range and validation rules remain subject to joint agreement.
+Comparisons must be numeric rather than lexicographic.
+
+Member 4 proposes rejecting signs, whitespace, leading zeros and
+values outside the agreed positive range.
+
+Current Python assessment helpers retain integer revisions.
+No serialization adapter is implemented by this review record.
+
+Members 1 and 2 support an opaque, server-generated error requestId
+as a proposal.
+
+Its format and propagation rules remain to be specified.
+It must contain no account, session or credential information and must
+not grant authorization or reveal internal implementation details.
+
+### Ownership and live integration boundaries
+
+Auth establishes identity and session validity.
+
+The relevant domain services own disclosure, eligibility, capacity,
+conflicts and action permissions.
+
+Member 4 owns retrieval and assessment against reviewed source contracts.
+
+Before live implementation, agree:
+
+- Canonical identifiers, maximum lengths and profile/account mapping.
+- Requesting-account derivation from validated authentication.
+- Operation permissions and subject ownership requirements.
+- Source owners and versioned API/event schemas.
+- Visibility, withdrawal, deletion and reconciliation behavior.
+- Canonical skill and location identifiers.
+- Per-job experience evidence, units and derivation version.
+- Behavior when experience evidence is unavailable.
+- Freshness limits and authoritative revalidation before disclosure.
+- Withdrawal races and unavailable source-check behavior.
+- Authorized display-data composition.
+- Protection of candidate IDs, explanations and missing-field indicators.
+- Missing-versus-inaccessible subject behavior.
+- Source-revision serialization and validation.
+- Live ranking and filtering policy acceptance.
+- Pagination and result-set lifecycle.
+
+Real profile display and recommendation actions remain pending reviewed
+disclosure and permission contracts.
+
+Required live verification failures must follow the agreed failure contract.
+They must not become empty success or synthetic NOT_VERIFIED responses.
+
+Issue #51 remains open.
+No live endpoints or integration are approved by these confirmations.
