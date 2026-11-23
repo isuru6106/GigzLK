@@ -6,6 +6,7 @@ import { DatabaseService } from './database.service';
 import { HealthController } from './health.controller';
 import {
   PaymentAssignmentClient,
+  PaymentCompletionClient,
   PaymentSessionClient,
 } from './payments/payment-access.clients';
 import { PaymentController } from './payments/payment.controller';
@@ -13,6 +14,8 @@ import { PaymentNoStoreMiddleware } from './payments/payment-no-store.middleware
 import { PaymentReadService } from './payments/payment-read.service';
 import { PaymentReleaseService } from './payments/payment-release.service';
 import { PaymentRepository } from './payments/payment.repository';
+import { PaymentApprovalRepository } from './payments/payment-approval.repository';
+import { PaymentApprovalService } from './payments/payment-approval.service';
 
 @Module({
   imports: [],
@@ -24,6 +27,9 @@ import { PaymentRepository } from './payments/payment.repository';
     PaymentReleaseService,
     PaymentSessionClient,
     PaymentAssignmentClient,
+    PaymentCompletionClient,
+    PaymentApprovalRepository,
+    PaymentApprovalService,
     PaymentReadService,
   ],
 })

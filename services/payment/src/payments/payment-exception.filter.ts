@@ -28,6 +28,18 @@ const safeErrors: Record<string, { status: number; message: string }> = {
     status: 503,
     message: 'Payment storage is unavailable',
   },
+  PAYMENT_STATE_CONFLICT: {
+    status: 409,
+    message: 'Payment state does not permit this operation',
+  },
+  IDEMPOTENCY_CONFLICT: {
+    status: 409,
+    message: 'Idempotency key conflicts with an existing request',
+  },
+  COMPLETION_UNAVAILABLE: {
+    status: 503,
+    message: 'Completion validation is unavailable',
+  },
 };
 
 @Catch()
