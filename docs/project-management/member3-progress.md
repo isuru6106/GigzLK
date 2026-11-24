@@ -101,8 +101,12 @@ Latest confirmed results:
 - 10 worker unit tests pass.
 - ESLint passes for the latest tested changes.
 
-Retention cleanup code has been supplied but its successful build and
-tests have not yet been confirmed.
+Retention cleanup and maintenance execution are tested. The local runner
+starts and stops successfully. Regression results: 79 unit tests,
+1 HTTP test and 25 PostgreSQL integration tests pass.
+
+Worker PR review/merge, production configuration, key-ring loading and
+live integrations remain pending.
 
 ## Chat and files — 0/10
 
